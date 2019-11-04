@@ -1,36 +1,48 @@
 <!DOCTYPE HTML>
 <html>
    <head>
-        <script src="/bytebuffer.js"></script>
-        <script src="/protobuf.js"></script>
+   
+        <script type="text/javascript" src="/closure-library/closure/goog/base.js"></script>
 
-     
+        <script type="text/javascript" src="/protobuf/js/binary/constants.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/utils.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/arith.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/encoder.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/decoder.js"></script>
+        <script type="text/javascript" src="/protobuf/js/map.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/writer.js"></script>
+        <script type="text/javascript" src="/protobuf/js/binary/reader.js"></script>
+        <script type="text/javascript" src="/protobuf/js/message.js"></script>
+
+        <script type="text/javascript" src="/pb.js"></script>
 
         <script type = "text/javascript">
             (function() {
-
-                
-
-                var ProtoBuf = dcodeIO.ProtoBuf;
-                var builder = ProtoBuf.loadJsonFile("message.json");
-
+                //var ProtoBuf = dcodeIO.ProtoBuf;
+                //var builder = ProtoBuf.loadJsonFile("message.json");
                 
                 // Let us open a web socket
                 var ws = new WebSocket("ws://127.0.0.1:8080/ws");
 
-                var Message = builder.build("Message");
-                var Hello = builder.build("Hello");
+                //var Message = builder.build("Message");
+                //var Hello = builder.build("Hello");
+
+                var ggg = new proto.messages.Hello();
+                ggg.setName("llll");
+                //var mmm = new proto.messages.Message();
                 
                 ws.onopen = function() {
                     ws.binaryType = "arraybuffer";
 
-                    var data = Hello.encode({name: "Worl"}).buffer;
-                    var message = Message.encode({type: 1, data: data}).buffer;
-                    ws.send(message);
+                    //debugger;
+
+                    //var data = Hello.encode({name: "Worl"}).buffer;
+                    //var message = Message.encode({type: 1, data: data}).buffer;
+                    ws.send(ggg.serializeBinary());
                 };
                 
                 ws.onmessage = function (event) { 
-                    var message = Message.decode(event.data);
+                    var message = proto.messages.Message.deserializeBinary(event.data);
                     //console.log(message);
                 };
                 
@@ -44,13 +56,18 @@
 
                 setInterval(() => {
                     if (ws.readyState !== ws.CLOSED) {
-                        var data = Hello.encode({name: "Worl"}).buffer;
-                        var message = Message.encode({type: 1, data: data}).buffer;
+                        //var data = Hello.encode({name: "Worl"}).buffer;
+                        var data = new proto.messages.Hello();
+                        data.setName("Worl");
+                        //var message = Message.encode({type: 1, data: data}).buffer;
+                        var message = new proto.messages.Message();
+                        message.setType(proto.messages.Message.Type.HELLO);
+                        message.setData(data.serializeBinary());
 
-                        console.log(data, "data");
-                        console.log(message, "message");
+                        //console.log(data, "data");
+                        //console.log(message, "message");
 
-                        ws.send(message);
+                        ws.send(message.serializeBinary());
                     }
                 }, 1000/30);
                 

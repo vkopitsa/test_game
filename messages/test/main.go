@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	fmt "fmt"
+	//fmt "fmt"
 	"syscall/js"
 
 	"github.com/gogo/protobuf/proto"
@@ -18,7 +18,7 @@ func main() {
 
 	js.Global().Set("c", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 		data, _ := proto.Marshal(msg)
-		fmt.Println(data)
+		//fmt.Println(data)
 
 		s := make([]interface{}, len(data))
 		for i, v := range data {
