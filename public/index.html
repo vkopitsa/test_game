@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html>
+   <head>
+        <script src="/bytebuffer.js"></script>
+        <script src="/protobuf.js"></script>
+
+     
+
+        <script type = "text/javascript">
+            (function() {
+
+                
+
+                var ProtoBuf = dcodeIO.ProtoBuf;
+                var builder = ProtoBuf.loadJsonFile("message.json");
+
+                
+                // Let us open a web socket
+                var ws = new WebSocket("ws://127.0.0.1:8080/ws");
+
+                var Message = builder.build("Message");
+                var Hello = builder.build("Hello");
+                
+                ws.onopen = function() {
+                    ws.binaryType = "arraybuffer";
+
+                    var data = Hello.encode({name: "Worl"}).buffer;
+                    var message = Message.encode({type: 1, data: data}).buffer;
+                    ws.send(message);
+                };
+                
+                ws.onmessage = function (event) { 
+                    var message = Message.decode(event.data);
+                    //console.log(message);
+                };
+                
+                ws.onclose = function() { 
+                    
+                    // websocket is closed.
+                    //alert("Connection is closed..."); 
+                    //data.textContent = 'Connection closed';
+                    console.log("Connection is closed...");
+                };
+
+                setInterval(() => {
+                    if (ws.readyState !== ws.CLOSED) {
+                        var data = Hello.encode({name: "Worl"}).buffer;
+                        var message = Message.encode({type: 1, data: data}).buffer;
+
+                        console.log(data, "data");
+                        console.log(message, "message");
+
+                        ws.send(message);
+                    }
+                }, 1000/30);
+                
+            })();
+        </script>
+   </head>
+   
+   <body>
+    <div id="fileData"></div>
+   </body>
+</html>

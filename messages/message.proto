@@ -1,0 +1,16 @@
+syntax = "proto3";
+package messages;
+
+message Message {
+    enum Type {
+        UNKNOWN = 0;
+        HELLO = 1;
+        AUTH = 2;
+      }
+    Type type = 1;
+    bytes data = 2;
+}
+
+message Hello {
+    string name = 1;
+}

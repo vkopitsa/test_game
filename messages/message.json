@@ -1,0 +1,37 @@
+{
+  "nested": {
+    "messages": {
+      "nested": {
+        "Message": {
+          "fields": {
+            "type": {
+              "type": "Type",
+              "id": 1
+            },
+            "data": {
+              "type": "bytes",
+              "id": 2
+            }
+          },
+          "nested": {
+            "Type": {
+              "values": {
+                "UNKNOWN": 0,
+                "HELLO": 1,
+                "AUTH": 2
+              }
+            }
+          }
+        },
+        "Hello": {
+          "fields": {
+            "name": {
+              "type": "string",
+              "id": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
