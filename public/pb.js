@@ -161,7 +161,8 @@ proto.messages.Message.serializeBinaryToWriter = function(message, writer) {
 proto.messages.Message.Type = {
   UNKNOWN: 0,
   HELLO: 1,
-  AUTH: 2
+  AUTH: 2,
+  JOIN: 3
 };
 
 /**

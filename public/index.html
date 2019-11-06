@@ -27,8 +27,8 @@
                 //var Message = builder.build("Message");
                 //var Hello = builder.build("Hello");
 
-                var ggg = new proto.messages.Hello();
-                ggg.setName("llll");
+                var ggg = new proto.messages.Message();
+                ggg.setType(proto.messages.Message.Type.HELLO);
                 //var mmm = new proto.messages.Message();
                 
                 ws.onopen = function() {
@@ -43,7 +43,7 @@
                 
                 ws.onmessage = function (event) { 
                     var message = proto.messages.Message.deserializeBinary(event.data);
-                    //console.log(message);
+                    //console.log(message.getType());
                 };
                 
                 ws.onclose = function() { 

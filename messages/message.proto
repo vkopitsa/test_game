@@ -6,6 +6,7 @@ message Message {
         UNKNOWN = 0;
         HELLO = 1;
         AUTH = 2;
+        JOIN = 3;
       }
     Type type = 1;
     bytes data = 2;
