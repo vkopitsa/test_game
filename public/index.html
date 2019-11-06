@@ -16,6 +16,56 @@
 
         <script type="text/javascript" src="/pb.js"></script>
 
+        <style>
+            body {
+                height: 100%;
+                width: 100%;
+                background-color: black;
+                color: greenyellow;
+                position: fixed;
+            }
+
+            #status {
+                position: fixed;
+                right: 10px;
+            }
+
+            .hide {
+                display: none;
+            }
+
+            .show {
+                display: auto;
+            }
+
+            #my {
+                height: 50px;
+                width: 50px;
+                position: absolute;
+                background-color: crimson;
+                border-radius: 50px;
+            }
+
+            #other {
+                height: 50px;
+                width: 50px;
+                position: absolute;
+                background-color: red;
+                border-radius: 50px;
+            }
+        </style>
+   </head>
+   
+   <body>
+        <div id="status"></div>
+        <div>
+            <div id="start">Start game</div>
+            <div id="stop" class="hide">Stop game</div>
+        </div>
+
+        <div id="my" class="hide"></div>
+        <div id="other" class="hide"></div>
+
         <script type = "text/javascript">
             (function() {
                 //var ProtoBuf = dcodeIO.ProtoBuf;
@@ -23,12 +73,53 @@
                 
                 // Let us open a web socket
                 var ws = new WebSocket("ws://127.0.0.1:8080/ws");
+                
+                var message = new proto.messages.Message();
+                var statusEl = document.getElementById("status");
+                var myEl = document.getElementById("my");
+                var otherEl = document.getElementById("other");
+
+                var startEl = document.getElementById("start");
+                startEl.addEventListener("click", function(event) {
+                    message.setType(proto.messages.Message.Type.JOIN)
+                    message.setData(null);
+                    ws.send(message.serializeBinary());
+
+                    stopEl.className = "show";
+                    startEl.className = "hide";
+                    myEl.className = "show";
+                });
+
+                var stopEl = document.getElementById("stop");
+                stopEl.addEventListener("click", function(event) {
+                    message.setType(proto.messages.Message.Type.QUIT)
+                    message.setData(null);
+                    ws.send(message.serializeBinary());
+
+                    startEl.className = "show";
+                    stopEl.className = "hide";
+                });
+
+                var bodyEl = document.getElementsByTagName('body')[0];
+                bodyEl.addEventListener("mousemove", function(event) {
+                    var data = new proto.messages.Data();
+                    data.setY(event.clientY);
+                    data.setX(event.clientX);
+                    data.setHeight(document.body.scrollHeight);
+                    data.setWidth(document.body.scrollWidth);
+
+                    message.setType(proto.messages.Message.Type.DATA)
+                    message.setData(data.serializeBinary());
+                    ws.send(message.serializeBinary());
+
+                    myEl.style.top = event.clientY + -25 + 'px';
+                    myEl.style.left = event.clientX + -25 + 'px';
+                });
 
                 //var Message = builder.build("Message");
                 //var Hello = builder.build("Hello");
 
-                var ggg = new proto.messages.Message();
-                ggg.setType(proto.messages.Message.Type.HELLO);
+                //ggg.setType(proto.messages.Message.Type.HELLO);
                 //var mmm = new proto.messages.Message();
                 
                 ws.onopen = function() {
@@ -38,12 +129,25 @@
 
                     //var data = Hello.encode({name: "Worl"}).buffer;
                     //var message = Message.encode({type: 1, data: data}).buffer;
-                    ws.send(ggg.serializeBinary());
+
+                    message.setType(proto.messages.Message.Type.HELLO);
+                    message.setData(null);
+                    ws.send(message.serializeBinary());
+
+                    statusEl.innerHTML = "opened";
+                    console.log("Connection is opened...");
                 };
                 
                 ws.onmessage = function (event) { 
                     var message = proto.messages.Message.deserializeBinary(event.data);
-                    //console.log(message.getType());
+                    if (message.getType() === proto.messages.Message.Type.DATA) {
+                        otherEl.className = "show";
+
+                        var data = proto.messages.Data.deserializeBinary(message.getData());
+                        
+                        otherEl.style.top = data.getY() + -25 + 'px';
+                        otherEl.style.left = data.getX() + -25 + 'px';
+                    }
                 };
                 
                 ws.onclose = function() { 
@@ -52,30 +156,27 @@
                     //alert("Connection is closed..."); 
                     //data.textContent = 'Connection closed';
                     console.log("Connection is closed...");
+                    statusEl.innerHTML = "closed";
                 };
 
-                setInterval(() => {
-                    if (ws.readyState !== ws.CLOSED) {
-                        //var data = Hello.encode({name: "Worl"}).buffer;
-                        var data = new proto.messages.Hello();
-                        data.setName("Worl");
-                        //var message = Message.encode({type: 1, data: data}).buffer;
-                        var message = new proto.messages.Message();
-                        message.setType(proto.messages.Message.Type.HELLO);
-                        message.setData(data.serializeBinary());
-
-                        //console.log(data, "data");
-                        //console.log(message, "message");
-
-                        ws.send(message.serializeBinary());
-                    }
-                }, 1000/30);
+                // setInterval(() => {
+                //    if (ws.readyState !== ws.CLOSED) {
+                //        //var data = Hello.encode({name: "Worl"}).buffer;
+                //        var data = new proto.messages.Hello();
+                //        data.setName("Worl");
+                //        //var message = Message.encode({type: 1, data: data}).buffer;
+                //        var message = new proto.messages.Message();
+                //        message.setType(proto.messages.Message.Type.HELLO);
+                //        message.setData(data.serializeBinary());
+                //        
+                //        //console.log(data, "data");
+                //        //console.log(message, "message");
+                //
+                //        ws.send(message.serializeBinary());
+                //    }
+                // }, 1000/30);
                 
             })();
         </script>
-   </head>
-   
-   <body>
-    <div id="fileData"></div>
    </body>
 </html>

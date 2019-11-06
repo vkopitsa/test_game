@@ -13,25 +13,25 @@ import (
 
 const CommandQueueSize = 10
 
-type Command int
+// type Command int
 
-type GameCommandTransport struct {
-	Command Command
-	Data    []byte
-}
+// type GameCommandTransport struct {
+// 	Command Command
+// 	Data    []byte
+// }
 
-type GameCommandInterface interface {
-	Command() Command
-	Source() int
-	SetSource(int)
-}
+// type GameCommandInterface interface {
+// 	Command() Command
+// 	Source() int
+// 	SetSource(int)
+// }
 
 type Conn struct {
 	conn         *websocket.Conn
 	LastTransfer time.Time
 	Terminated   bool
 
-	Player     int
+	Player     int32
 	In         chan *messages.Message
 	out        chan *messages.Message
 	forwardOut chan *messages.Message
@@ -223,6 +223,15 @@ func (s *Conn) handleWrite() {
 	// }
 }
 
+func (s *Conn) Write(m *messages.Message) {
+	if s == nil || s.Terminated {
+		return
+	}
+
+	//s.Add(1)
+	s.out <- m
+}
+
 func (s *Conn) Close() {
 	if s.Terminated {
 		return
@@ -237,4 +246,8 @@ func (s *Conn) Close() {
 		close(s.In)
 		close(s.out)
 	}()
+}
+
+func (s Conn) GetPlayerId() int32 {
+	return s.Player
 }

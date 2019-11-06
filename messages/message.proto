@@ -7,11 +7,17 @@ message Message {
         HELLO = 1;
         AUTH = 2;
         JOIN = 3;
+        QUIT = 4;
+        DATA = 5;
       }
     Type type = 1;
     bytes data = 2;
+    int32 playerId = 3;
 }
 
-message Hello {
-    string name = 1;
+message Data {
+    int32 y = 1;
+    int32 x = 2;
+    int32 height = 3;
+    int32 width = 4;
 }

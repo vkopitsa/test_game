@@ -1,12 +1,13 @@
 package server
 
 import (
-	"fmt"
+	"log"
 	"server/messages"
 
 	//"strings"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
@@ -54,6 +55,8 @@ func New(logLevel int) Server {
 		logLevel: logLevel,
 		In:       in,
 		Out:      out,
+
+		Games: make(map[int]*Game),
 	}
 
 	s.NewPlayers = make(chan *IncomingPlayer, CommandQueueSize)
@@ -66,6 +69,9 @@ func New(logLevel int) Server {
 
 func (s *server) Listen(address string) {
 	s.e = echo.New()
+
+	var i int32 = 0
+
 	// e.Use(middleware.Logger())
 	// e.Use(middleware.Recover())
 	s.e.Static("/", "../../public")
@@ -73,7 +79,11 @@ func (s *server) Listen(address string) {
 		conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 
 		if err == nil {
-			s.NewPlayers <- &IncomingPlayer{Conn: NewServerConn(conn, nil)}
+			serverConn := NewServerConn(conn, nil)
+			serverConn.Player = i
+			s.NewPlayers <- &IncomingPlayer{Conn: serverConn}
+
+			i++
 		}
 
 		return err
@@ -105,9 +115,12 @@ func (s *server) handleNewPlayer(pl Player) {
 	}()
 
 	for e := range pl.GetIn() {
+
+		// log.Println("handleNewPlayer", e)
+
 		switch e.GetType() {
 		case messages.Message_HELLO:
-			fmt.Println(e)
+			log.Println(e)
 		// 	if _, ok := e.(*GameCommandListGames); ok {
 		// 		var gl []*ListedGame
 
@@ -144,7 +157,10 @@ func (s *server) handleNewPlayer(pl Player) {
 			// 			g.Logf(LogStandard, "Player %s created new game %s", pl.Name, g.Name)
 			// 		}
 
+			g.AddPlayer(pl)
+
 			go s.handleGameCommands(pl, g)
+			return
 
 			// 		handled = true
 			// 		return
@@ -154,6 +170,9 @@ func (s *server) handleNewPlayer(pl Player) {
 }
 
 func (s *server) FindGame(p Player) *Game {
+	if len(s.Games) == 0 {
+		s.Games[0] = NewGame()
+	}
 	return s.Games[0]
 }
 
@@ -196,9 +215,34 @@ func (s *server) handleGameCommands(pl Player, g *Game) {
 
 		// g.Lock()
 
+		// log.Println("handleGameCommands", e)
+
 		switch e.GetType() {
-		case messages.Message_HELLO:
+		case messages.Message_QUIT:
 			//g.RemovePlayerL(p.SourcePlayer)
+			log.Println("handleGameCommands quit", e)
+		case messages.Message_DATA:
+			data := &messages.Data{}
+			err := proto.Unmarshal(e.GetData(), data)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+
+			if _, ok := g.Players[e.GetPlayerId()]; ok {
+				// newNick := Nickname(p.Nickname)
+				// if newNick != "" && newNick != player.Name {
+				// 	oldNick := player.Name
+				// 	player.Name = newNick
+
+				// 	g.Logf(LogStandard, "* %s is now known as %s", oldNick, newNick)
+				g.WriteAll(&messages.Message{
+					PlayerId: e.GetPlayerId(),
+					Type:     messages.Message_DATA,
+					Data:     e.GetData(),
+				})
+				// }
+			}
 		}
 		// case *GameCommandDisconnect:
 		// 	g.RemovePlayerL(p.SourcePlayer)

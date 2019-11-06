@@ -24,6 +24,8 @@ type player struct {
 type Player interface {
 	Close()
 	GetIn() chan *messages.Message
+	Write(m *messages.Message)
+	GetPlayerId() int32
 }
 
 func NewPlayer(name string, conn *Conn) Player {
