@@ -1,0 +1,18 @@
+version: '2'
+services:
+  app:
+    container_name: "${PREFIX_CONTAINER}app"
+    hostname:       "${PREFIX_CONTAINER}app"
+    restart: always
+    env_file: ${DOCKER_FOLDER}/.env
+    build:
+      context: ${PROJECT_FOLDER}
+      dockerfile: docker/src/server/Dockerfile
+    # volumes: 
+    #   - "${PROJECT_FOLDER}/quotation.png:/quotation.png:ro"
+    ports:
+      - ${APP_PORT}:8080
+    logging:
+      options:
+        max-size: "200k"
+        max-file: "10"

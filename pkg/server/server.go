@@ -10,11 +10,12 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
-const (
-	DefaultPort = 8080
-)
+// const (
+// 	DefaultPort = 8080
+// )
 
 const (
 	LogStandard = iota
@@ -72,9 +73,9 @@ func (s *server) Listen(address string) {
 
 	var i int32 = 0
 
-	// e.Use(middleware.Logger())
-	// e.Use(middleware.Recover())
-	s.e.Static("/", "../../public")
+	s.e.Use(middleware.Logger())
+	// s.e.Use(middleware.Recover())
+	s.e.Static("/", "./public")
 	s.e.GET("/ws", func(c echo.Context) error {
 		conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 

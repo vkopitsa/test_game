@@ -67,12 +67,13 @@
         <div id="other" class="hide"></div>
 
         <script type = "text/javascript">
+            function url(s) {
+                var l = window.location;
+                return ((l.protocol === "https:") ? "wss://" : "ws://") + l.hostname + (((l.port != 80) && (l.port != 443)) ? ":" + l.port : "") + l.pathname + s;
+            }
+
             (function() {
-                //var ProtoBuf = dcodeIO.ProtoBuf;
-                //var builder = ProtoBuf.loadJsonFile("message.json");
-                
-                // Let us open a web socket
-                var ws = new WebSocket("ws://127.0.0.1:8080/ws");
+                var ws = new WebSocket(url("ws"));
                 
                 var message = new proto.messages.Message();
                 var statusEl = document.getElementById("status");
