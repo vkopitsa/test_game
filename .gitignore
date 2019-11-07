@@ -3,16 +3,13 @@ bot/constants.go
 *.mp3
 .env
 *.db
-debug/
 *.csv
 *.csv_old
 *.db-journal
 .vscode/
-db/
 bin/iaa*
 .DS_Store
 debug.test
-debug
 .DS_Store
 data/mariadb/
 storage/*/*.html
