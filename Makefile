@@ -17,7 +17,16 @@ all: fmt test build
 test: ## test
 	go test ./...
 
-build: linux darwin windows
+build: linux darwin windows ## Build server
+
+server-start: ## start 
+	go run cmd/server/main.go
+
+front-build: ## build front
+	cd front/ && NODE_ENV=production npm run build
+
+front-dev: ## develop front
+	cd front/ && npm start
 
 linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH} go build ${LDFLAGS} -o ./bin/${RELNAME}-linux-${GOARCH} cmd/server/*.go

@@ -1,0 +1,30 @@
+{
+    "name": "test_game",
+    "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/vkopitsa/test_game.git"
+    },
+    "description": "The simple game",
+    "scripts": {
+        "start": "webpack-dev-server --open",
+        "build": "webpack"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "clean-webpack-plugin": "^3.0.0",
+        "closure-webpack-plugin": "^2.0.1",
+        "copy-webpack-plugin": "^5.0.5",
+        "css-loader": "^3.2.0",
+        "glob": "^7.1.6",
+        "google-closure-compiler": "^20191027.0.0",
+        "html-webpack-plugin": "^3.2.0",
+        "style-loader": "^1.0.0",
+        "terser-webpack-plugin": "^2.2.1",
+        "ts-loader": "^6.1.2",
+        "typescript": "^3.7.2",
+        "webpack": "^4.41.2",
+        "webpack-cli": "^3.3.10",
+        "webpack-dev-server": "^3.9.0"
+    }
+}

@@ -75,7 +75,7 @@ func (s *server) Listen(address string) {
 
 	s.e.Use(middleware.Logger())
 	// s.e.Use(middleware.Recover())
-	s.e.Static("/", "./public")
+	s.e.Static("/", "./front/dist")
 	s.e.GET("/ws", func(c echo.Context) error {
 		conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 
