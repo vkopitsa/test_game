@@ -24,7 +24,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /
 COPY --from=builder /app .
-COPY --from=builder /go/src/github.com/v.kopitsa/test_game/public /public
+COPY --from=builder /go/src/github.com/v.kopitsa/test_game/front /front
 
 # run it!
 CMD ["./app", "server"]
