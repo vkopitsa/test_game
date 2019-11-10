@@ -9,6 +9,8 @@ message Message {
         JOIN = 3;
         QUIT = 4;
         DATA = 5;
+        JOINED = 6;
+        DIRECTION = 7;
       }
     Type type = 1;
     bytes data = 2;

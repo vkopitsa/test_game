@@ -39,6 +39,8 @@ export namespace Message {
     JOIN: 3;
     QUIT: 4;
     DATA: 5;
+    JOINED: 6;
+    DIRECTION: 7;
   }
 
   export const Type: TypeMap;

@@ -173,7 +173,9 @@ proto.messages.Message.Type = {
   AUTH: 2,
   JOIN: 3,
   QUIT: 4,
-  DATA: 5
+  DATA: 5,
+  JOINED: 6,
+  DIRECTION: 7
 };
 
 /**

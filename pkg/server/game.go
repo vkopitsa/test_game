@@ -1,9 +1,14 @@
 package server
 
-import "server/messages"
+import (
+	"server/messages"
+	"time"
+)
 
 type Game struct {
-	Players map[int32]Player
+	Started     bool
+	TimeStarted time.Time
+	Players     map[int32]Player
 }
 
 func NewGame() *Game {
@@ -38,6 +43,11 @@ func NewGame() *Game {
 	// go g.handleDropTerminatedPlayers()
 
 	return g
+}
+
+func (g *Game) Start() {
+	g.Started = true
+	g.TimeStarted = time.Now()
 }
 
 func (g *Game) WriteAll(m *messages.Message) {

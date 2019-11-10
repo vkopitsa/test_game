@@ -1,0 +1,13 @@
+syntax = "proto3";
+package messages;
+
+message Direction {
+    enum Type {
+        STOP = 0;
+        UP = 1;
+        DOWN = 2;
+        LEFT = 3;
+        RIGHT = 4;
+      }
+    Type type = 1;
+}

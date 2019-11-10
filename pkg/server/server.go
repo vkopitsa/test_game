@@ -81,7 +81,7 @@ func (s *server) Listen(address string) {
 
 		if err == nil {
 			serverConn := NewServerConn(conn, nil)
-			serverConn.Player = i
+			serverConn.PlayerId = i
 			s.NewPlayers <- &IncomingPlayer{Conn: serverConn}
 
 			i++
@@ -160,6 +160,12 @@ func (s *server) handleNewPlayer(pl Player) {
 
 			g.AddPlayer(pl)
 
+			// send player id to front
+			pl.Write(&messages.Message{
+				PlayerId: pl.GetPlayerId(),
+				Type:     messages.Message_JOINED,
+			})
+
 			go s.handleGameCommands(pl, g)
 			return
 
@@ -173,6 +179,7 @@ func (s *server) handleNewPlayer(pl Player) {
 func (s *server) FindGame(p Player) *Game {
 	if len(s.Games) == 0 {
 		s.Games[0] = NewGame()
+		//s.Games[0].Start()
 	}
 	return s.Games[0]
 }
@@ -216,7 +223,7 @@ func (s *server) handleGameCommands(pl Player, g *Game) {
 
 		// g.Lock()
 
-		// log.Println("handleGameCommands", e)
+		log.Println("handleGameCommands", e)
 
 		switch e.GetType() {
 		case messages.Message_QUIT:
@@ -226,24 +233,34 @@ func (s *server) handleGameCommands(pl Player, g *Game) {
 			data := &messages.Data{}
 			err := proto.Unmarshal(e.GetData(), data)
 			if err != nil {
-				log.Println(err)
+				// log.Println(err)
 				continue
 			}
 
-			if _, ok := g.Players[e.GetPlayerId()]; ok {
-				// newNick := Nickname(p.Nickname)
-				// if newNick != "" && newNick != player.Name {
-				// 	oldNick := player.Name
-				// 	player.Name = newNick
+			// if _, ok := g.Players[e.GetPlayerId()]; ok {
+			// newNick := Nickname(p.Nickname)
+			// if newNick != "" && newNick != player.Name {
+			// 	oldNick := player.Name
+			// 	player.Name = newNick
 
-				// 	g.Logf(LogStandard, "* %s is now known as %s", oldNick, newNick)
-				g.WriteAll(&messages.Message{
-					PlayerId: e.GetPlayerId(),
-					Type:     messages.Message_DATA,
-					Data:     e.GetData(),
-				})
-				// }
-			}
+			// 	g.Logf(LogStandard, "* %s is now known as %s", oldNick, newNick)
+			g.WriteAll(&messages.Message{
+				PlayerId: pl.GetPlayerId(),
+				Type:     messages.Message_DATA,
+				Data:     e.GetData(),
+			})
+		case messages.Message_DIRECTION:
+			// data := &messages.Data{}
+			// err := proto.Unmarshal(e.GetData(), data)
+			// if err != nil {
+			// 	continue
+			// }
+
+			g.WriteAll(&messages.Message{
+				PlayerId: pl.GetPlayerId(),
+				Type:     messages.Message_DIRECTION,
+				Data:     e.GetData(),
+			})
 		}
 		// case *GameCommandDisconnect:
 		// 	g.RemovePlayerL(p.SourcePlayer)

@@ -26,12 +26,23 @@ const CommandQueueSize = 10
 // 	SetSource(int)
 // }
 
+const (
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the peer.
+	wait = 6000 * time.Second
+
+	// Maximum message size allowed from peer.
+	maxMessageSize = 512
+)
+
 type Conn struct {
 	conn         *websocket.Conn
 	LastTransfer time.Time
 	Terminated   bool
 
-	Player     int32
+	PlayerId   int32
 	In         chan *messages.Message
 	out        chan *messages.Message
 	forwardOut chan *messages.Message
@@ -45,6 +56,9 @@ func NewServerConn(conn *websocket.Conn, forwardOut chan *messages.Message) *Con
 	c.In = make(chan *messages.Message, CommandQueueSize)
 	c.out = make(chan *messages.Message, CommandQueueSize)
 	c.forwardOut = forwardOut
+
+	conn.SetReadLimit(maxMessageSize)
+	conn.SetReadDeadline(time.Now().Add(wait))
 
 	c.LastTransfer = time.Now()
 
@@ -249,5 +263,5 @@ func (s *Conn) Close() {
 }
 
 func (s Conn) GetPlayerId() int32 {
-	return s.Player
+	return s.PlayerId
 }

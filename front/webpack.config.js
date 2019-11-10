@@ -12,7 +12,7 @@ module.exports = (env, argv) => {
 
     return {
         entry: {
-            index: './src/main.ts',
+            index: './src/app.ts',
 
             // closure: "./closure-library/closure/goog/base.js",
 
@@ -56,26 +56,9 @@ module.exports = (env, argv) => {
             }),
             new CopyWebpackPlugin(
                 [{
-                        from: 'src/normalize.css',
-                        to: path.resolve(__dirname, 'dist')
-                    },
-                    {
-                        from: 'src/style.css',
-                        to: path.resolve(__dirname, 'dist')
-                    },
-                    {
-                        from: 'src/favicon.ico',
-                        to: path.resolve(__dirname, 'dist')
-                    },
-                    // {
-                    //     from: 'protobuf',
-                    //     to: path.resolve(__dirname, 'dist/protobuf')
-                    // },
-                    // {
-                    //     from: 'closure-library',
-                    //     to: path.resolve(__dirname, 'dist/closure-library')
-                    // }
-                ]
+                    from: 'src/favicon.ico',
+                    to: path.resolve(__dirname, 'dist')
+                }, ]
             ),
             new ClosurePlugin.LibraryPlugin({
                 closureLibraryBase: require.resolve(
