@@ -3,6 +3,8 @@ import { Message } from "./proto/message_pb";
 import { Data } from "./proto/data_pb";
 import { Direction as PDirection } from "./proto/direction_pb";
 import { Player } from './player';
+import { Map as GameMap } from './map';
+import { Camera } from "./camera";
 
 export enum Direction {
   Stop = 0,
@@ -14,8 +16,8 @@ export enum Direction {
 
 export class Game {
   private readonly ctx: CanvasRenderingContext2D; // HTML Canvas's 2D context
-  private readonly canvasWidth: number; // width of the canvas
-  private readonly canvasHeight: number; // height of the canvas
+  private canvasWidth: number = 0; // width of the canvas
+  private canvasHeight: number = 0; // height of the canvas
   // private readonly ball = new Ball(50, 50); // create a new ball with x and y 50 and other properties default
   private lastTime: number = 0;
   private gameTime: number = 0;
@@ -28,10 +30,25 @@ export class Game {
   // Speed in pixels per second
   private playerSpeed = 100;
 
+  private map: GameMap;
+  private camera: Camera;
+
   constructor(canvas: HTMLCanvasElement, private communication: IСommunication) {
     this.ctx = canvas.getContext('2d')!;
-    this.canvasWidth = canvas.width;
-    this.canvasHeight = canvas.height;
+    this.resizeCanvasToDisplaySize(this.ctx.canvas);
+
+    const width = 5000;
+    const height = 3000;
+
+    this.map = new GameMap(width, height);
+    this.map.generate();
+
+    // Set the right viewport size for the camera
+    const vWidth = Math.min(width, canvas.width);
+    const vHeight = Math.min(height, canvas.height);
+
+    // Setup the camera
+    this.camera = new Camera(0, 0, vWidth, vHeight, width, height);
 
     const that = this;
     window.addEventListener('keydown', function(event) {
@@ -56,8 +73,12 @@ export class Game {
 
     this.communication.onMesssage((msg: Message) => {
       if (msg.getType() === Message.Type.JOINED && !this.players.has(msg.getPlayerid())) {
-        this.players.set(msg.getPlayerid(), new Player(50, 50))
+        const player = new Player(50, 50);
+        
+        this.players.set(msg.getPlayerid(), player)
         this.playerId = msg.getPlayerid();
+
+        this.camera.follow(player, vWidth / 2, vHeight / 2);
       } else if (msg.getType() === Message.Type.DIRECTION) {
         const direction = PDirection.deserializeBinary(msg.getData_asU8());
         // this.players.forEach((player) => {
@@ -67,7 +88,7 @@ export class Game {
           this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
         } else {
           const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
-          const newPlayer = new Player(50, 50, 75, 5, color);
+          const newPlayer = new Player(50, 50, 200, 50, color);
           newPlayer.setDirection(direction.getType())
           this.players.set(msg.getPlayerid(), newPlayer);
         }
@@ -139,19 +160,85 @@ export class Game {
     // Update the player sprite animation
     //this.player.update(dt, this.canvasWidth, this.canvasHeight);
     this.players.forEach((player) => {
-      player.update(dt, this.canvasWidth, this.canvasHeight);
+      // player.update(dt, this.canvasWidth, this.canvasHeight);
+      player.update2(dt, 5000, 3000)
     });
+
+    //player.update(STEP, room.width, room.height);
+    this.camera.update();
   }
 
   private render() { 
+    //this.resizeCanvasToDisplaySize(this.ctx.canvas);
+    this.canvasWidth = this.ctx.canvas.width;
+    this.canvasHeight = this.ctx.canvas.height;
+
     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    this.map.draw(this.ctx, this.camera.xView, this.camera.yView);
+
+    // this.drawGrid(this.ctx);
     // this.player.render(this.ctx);
     this.players.forEach((player) => {
-      player.render(this.ctx);
+      player.render(this.ctx, this.camera.xView, this.camera.yView);
     });
   }
 
   private requestAnimationFrame = (callback: FrameRequestCallback) => {
     return window.requestAnimationFrame(callback);
   };
+
+  private resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement) => {
+    // look up the size the canvas is being displayed
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    // If it's resolution does not match change it
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+  };
+  
+  private drawGrid(
+      ctx: CanvasRenderingContext2D, 
+      minor: number | undefined = undefined, 
+      major: number | undefined = undefined, 
+      stroke: string | undefined = undefined, 
+      fill: string | undefined = undefined,
+  ){
+      minor = minor || 10;
+      major = major || minor * 5;
+      stroke = stroke || "#00FF00";
+      fill = fill || "#009900";
+      ctx.save();
+      ctx.strokeStyle = stroke;
+      ctx.fillStyle = fill;
+      let width = ctx.canvas.width, 
+          height = ctx.canvas.height;
+      
+      for(var x = 0; x < width; x += minor) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.lineWidth = (x % major == 0) ? 0.5 : 0.25;
+          ctx.stroke();
+          if(x % major == 0 ) {
+              ctx.fillText(x.toString(), x, 10);
+          }
+      }
+
+      for(var y = 0; y < height; y += minor) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+
+          ctx.lineTo(width, y);
+          ctx.lineWidth = (y % major == 0) ? 0.5 : 0.25;
+          ctx.stroke();
+          if(y % major == 0 ) {
+              ctx.fillText(y.toString(), 0, y + 10);
+          }
+      }
+      ctx.restore();
+  }
 }
