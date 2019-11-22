@@ -1,0 +1,17 @@
+syntax = "proto3";
+package messages;
+
+message Command {
+    enum Cmd {
+      None = 0;
+      Shot = 1;
+    }
+    
+    int64 time = 1;
+    // y velocity
+    double yv = 2;
+    // x velocity
+    double xv = 3;
+    // cmd
+    Cmd cmd = 4;
+}

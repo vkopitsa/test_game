@@ -1,14 +1,28 @@
 package server
 
 import (
+	"log"
 	"server/messages"
 	"time"
+
+	"github.com/gogo/protobuf/proto"
 )
+
+type GameCommand struct {
+	Player  Player
+	Message *messages.Message
+}
 
 type Game struct {
 	Started     bool
 	TimeStarted time.Time
 	Players     map[int32]Player
+
+	Command chan *GameCommand
+
+	// 5000, 3000
+	WorldWidth  int64
+	WorldHeight int64
 }
 
 func NewGame() *Game {
@@ -27,6 +41,8 @@ func NewGame() *Game {
 		// draw:       draw,
 		// logger:     logger,
 		// Mutex:      new(sync.Mutex)
+		WorldWidth:  5000,
+		WorldHeight: 3000,
 	}
 
 	// if out != nil {
@@ -48,6 +64,62 @@ func NewGame() *Game {
 func (g *Game) Start() {
 	g.Started = true
 	g.TimeStarted = time.Now()
+
+	go g.gameLoop()
+}
+
+func (g *Game) gameLoop() {
+	tick := time.Tick((1000 / 30) * time.Millisecond)
+
+	last := time.Now()
+	var dt float64
+
+	for {
+		select {
+		case <-tick:
+			dt = float64(time.Since(last).Microseconds()/1000) / 1000.0
+			// var now = Date.now();
+			// var dt = (now - this.lastTime) / 1000.0;
+			// log.Println("FPS", dt)
+			// _ = dt
+
+			g.processInputs(dt)
+			// g.sendGameState(dt)
+
+			last = time.Now()
+		}
+	}
+}
+
+func (g *Game) processInputs(dt float64) {
+	for _, p := range g.Players {
+		p.Tick(dt, g.WorldWidth, g.WorldHeight)
+
+		position := p.GetPosition(dt)
+		if position == nil {
+			continue
+		}
+
+		d := &messages.Data{
+			Y: position.y,
+			X: position.x,
+		}
+		data, err := proto.Marshal(d)
+		if err != nil {
+			log.Println("marshaling error: ", err)
+			return
+		}
+
+		g.WriteAll(&messages.Message{
+			PlayerId: p.GetPlayerId(),
+			Type:     messages.Message_DATA,
+			Data:     data,
+		})
+	}
+}
+
+func (g *Game) sendGameState() {
+
 }
 
 func (g *Game) WriteAll(m *messages.Message) {

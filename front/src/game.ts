@@ -1,10 +1,11 @@
 import { IСommunication } from "./communication";
 import { Message } from "./proto/message_pb";
-import { Data } from "./proto/data_pb";
+import { Command } from "./proto/command_pb";
 import { Direction as PDirection } from "./proto/direction_pb";
 import { Player } from './player';
 import { Map as GameMap } from './map';
 import { Camera } from "./camera";
+import { Data } from './proto/data_pb';
 
 export enum Direction {
   Stop = 0,
@@ -92,6 +93,23 @@ export class Game {
           newPlayer.setDirection(direction.getType())
           this.players.set(msg.getPlayerid(), newPlayer);
         }
+      } else if (msg.getType() === Message.Type.DATA) {
+        const data = Data.deserializeBinary(msg.getData_asU8());
+        // this.players.forEach((player) => {
+        //   player.setDirection(this.playDirection)
+        // });
+        if (this.players.has(msg.getPlayerid())) {
+          const player = this.players.get(msg.getPlayerid())!
+          // player.setDirection(direction.getType())
+          player.setPosition(data.getY(), data.getX())
+          // this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
+        } else {
+          const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
+          const newPlayer = new Player(data.getX(), data.getY(), 200, 50, color);
+          newPlayer.setPosition(data.getY(), data.getX())
+          //newPlayer.setDirection(data.getType())
+          this.players.set(msg.getPlayerid(), newPlayer);
+        }
       }
 
     });
@@ -100,6 +118,8 @@ export class Game {
   public start() {
     var now = Date.now();
     var dt = (now - this.lastTime) / 1000.0;
+
+    // console.log((now - this.lastTime), "dt")
 
     this.update(dt);
     this.render();
@@ -146,9 +166,43 @@ export class Game {
     
     // send to server
     const message = new Message();
-    message.setType(Message.Type.DIRECTION);
-    const direction = new PDirection();
-    direction.setType(this.playDirection)
+    message.setType(Message.Type.COMMAND);
+    const direction = new Command();
+
+    // if (this.direction == Direction.Left)
+    // this.x -= this.speed * dt;
+    // if (this.direction == Direction.Up)
+    // this.y -= this.speed * dt;
+    // if (this.direction == Direction.Right)
+    // this.x += this.speed * dt;
+    // if (this.direction == Direction.Down)
+    // this.y += this.speed * dt;
+
+    let xv: number = 0;
+    let yv: number = 0;
+    switch (this.playDirection) {
+      case Direction.Down:
+          yv = 1;
+          xv = 0;
+          break;
+      case Direction.Up:
+          yv = -1;
+          xv = 0;
+          break;
+      case Direction.Left:
+          yv = 0;
+          xv = -1;
+          break;
+      case Direction.Right:
+          yv = 0;
+          xv = 1;
+        break;
+    }
+    
+    direction.setTime(new Date().getTime())
+    direction.setXv(xv);
+    direction.setYv(yv);
+
     message.setData(direction.serializeBinary());
     this.communication.sendMessage(message)
     // end

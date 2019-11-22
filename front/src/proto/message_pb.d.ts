@@ -41,6 +41,7 @@ export namespace Message {
     DATA: 5;
     JOINED: 6;
     DIRECTION: 7;
+    COMMAND: 8;
   }
 
   export const Type: TypeMap;

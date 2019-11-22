@@ -9,6 +9,7 @@ export class Сommunication implements IСommunication {
 
     private connect: WebSocket;
     private handlers: { (message: Message): void; }[] = [];
+    private connected: boolean = false;
 
     constructor() {
         this.connect = new WebSocket(this.url("ws"));
@@ -24,7 +25,9 @@ export class Сommunication implements IСommunication {
     }
 
     public sendMessage(message: Message): void {
-        this.connect.send(message.serializeBinary());
+        if (this.connected) {
+            this.connect.send(message.serializeBinary());
+        }
     }; 
     
     public onMesssage(handler: (message: Message) => void) {
@@ -32,11 +35,17 @@ export class Сommunication implements IСommunication {
     }
 
     private setup() {
+        const that = this;
+
         this.connect.onopen = function() {
             this.binaryType = "arraybuffer";
+            that.connected = true;
         };
 
-        const that = this;
+        this.connect.onclose = function() {
+            that.connected = false;
+        };
+
         this.connect.onmessage = function (event) { 
             const message = Message.deserializeBinary(event.data);
             for(const handler of that.handlers) {

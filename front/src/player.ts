@@ -88,6 +88,11 @@ export class Player {
     this.direction = direction;
   }
 
+  public setPosition(y: number, x: number){
+    this.y = y;
+    this.x = x;
+  }
+
   public render(ctx: CanvasRenderingContext2D, xView: number, yView: number) {
     ctx.beginPath();
 

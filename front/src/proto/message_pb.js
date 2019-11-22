@@ -175,7 +175,8 @@ proto.messages.Message.Type = {
   QUIT: 4,
   DATA: 5,
   JOINED: 6,
-  DIRECTION: 7
+  DIRECTION: 7,
+  COMMAND: 8
 };
 
 /**

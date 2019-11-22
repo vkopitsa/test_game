@@ -2,8 +2,8 @@ syntax = "proto3";
 package messages;
 
 message Data {
-    int32 y = 1;
-    int32 x = 2;
-    int32 height = 3;
-    int32 width = 4;
+    double y = 1;
+    double x = 2;
+    int64 height = 3;
+    int64 width = 4;
 }
