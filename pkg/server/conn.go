@@ -146,7 +146,7 @@ func (s *Conn) handleWrite() {
 
 	for e := range s.out {
 		if s.Terminated {
-			s.Done()
+			// 	s.Done()
 			continue
 		}
 
