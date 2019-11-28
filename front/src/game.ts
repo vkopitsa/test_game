@@ -13,6 +13,7 @@ export enum Direction {
   Down,
   Left,
   Right,
+  None,
 }
 
 export class Game {
@@ -74,7 +75,10 @@ export class Game {
 
     this.communication.onMesssage((msg: Message) => {
       if (msg.getType() === Message.Type.JOINED && !this.players.has(msg.getPlayerid())) {
-        const player = new Player(50, 50);
+        const player = new Player(msg.getPlayerid(), 50, 50);
+        player.setDirection(Direction.None)
+
+        // console.log("joned", player);
         
         this.players.set(msg.getPlayerid(), player)
         this.playerId = msg.getPlayerid();
@@ -88,8 +92,8 @@ export class Game {
         if (this.players.has(msg.getPlayerid())) {
           this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
         } else {
-          const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
-          const newPlayer = new Player(50, 50, 200, 50, color);
+          // const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
+          const newPlayer = new Player(msg.getPlayerid(), 50, 50, 200, 50);
           newPlayer.setDirection(direction.getType())
           this.players.set(msg.getPlayerid(), newPlayer);
         }
@@ -100,14 +104,18 @@ export class Game {
         // });
         if (this.players.has(msg.getPlayerid())) {
           const player = this.players.get(msg.getPlayerid())!
-          // player.setDirection(direction.getType())
+          // player.setDirection(Direction.None)
           player.setPosition(data.getY(), data.getX())
+          player.setVelocity(data.getYv(), data.getXv())
+          player.setColor(data.getColor())
           // this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
         } else {
-          const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
-          const newPlayer = new Player(data.getX(), data.getY(), 200, 50, color);
+          //const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
+          const newPlayer = new Player(msg.getPlayerid(), data.getX(), data.getY(), 200, 50, data.getColor());
           newPlayer.setPosition(data.getY(), data.getX())
-          //newPlayer.setDirection(data.getType())
+          // console.log(data.getYv(), data.getXv(), "data.getYv(), data.getXv()");
+          newPlayer.setVelocity(data.getYv(), data.getXv())
+          newPlayer.setDirection(Direction.None)
           this.players.set(msg.getPlayerid(), newPlayer);
         }
       }
@@ -197,6 +205,10 @@ export class Game {
           yv = 0;
           xv = 1;
         break;
+    }
+
+    if (yv != 0 || xv != 0) {
+      this.players.get(this.playerId)!.setVelocity(yv, xv)
     }
     
     direction.setTime(new Date().getTime())

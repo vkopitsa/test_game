@@ -17,6 +17,7 @@ type Game struct {
 	Started     bool
 	TimeStarted time.Time
 	Players     map[int32]Player
+	// mutexPlayers sync.RWMutex
 
 	Command chan *GameCommand
 
@@ -43,6 +44,7 @@ func NewGame() *Game {
 		// Mutex:      new(sync.Mutex)
 		WorldWidth:  5000,
 		WorldHeight: 3000,
+		// mutexPlayers: sync.RWMutex{},
 	}
 
 	// if out != nil {
@@ -92,29 +94,44 @@ func (g *Game) gameLoop() {
 }
 
 func (g *Game) processInputs(dt float64) {
+	// g.mutexPlayers.Lock()
+	// defer g.mutexPlayers.Unlock()
+
 	for _, p := range g.Players {
+		//g.mutexPlayers.Unlock()
+
 		p.Tick(dt, g.WorldWidth, g.WorldHeight)
 
 		position := p.GetPosition(dt)
 		if position == nil {
+			//g.mutexPlayers.Lock()
 			continue
 		}
 
+		yv, xy := p.GetCommand()
+
 		d := &messages.Data{
-			Y: position.y,
-			X: position.x,
+			Y:     position.y,
+			X:     position.x,
+			Yv:    yv,
+			Xv:    xy,
+			Color: p.GetColor(),
 		}
 		data, err := proto.Marshal(d)
 		if err != nil {
 			log.Println("marshaling error: ", err)
+			//g.mutexPlayers.Lock()
 			return
 		}
 
+		//g.mutexPlayers.Lock()
 		g.WriteAll(&messages.Message{
 			PlayerId: p.GetPlayerId(),
 			Type:     messages.Message_DATA,
 			Data:     data,
 		})
+
+		//g.mutexPlayers.Unlock()
 	}
 }
 
@@ -123,6 +140,9 @@ func (g *Game) sendGameState() {
 }
 
 func (g *Game) WriteAll(m *messages.Message) {
+	// g.mutexPlayers.Lock()
+	// defer g.mutexPlayers.Unlock()
+
 	for i := range g.Players {
 		g.Players[i].Write(m)
 	}
@@ -137,6 +157,8 @@ func (g *Game) AddPlayer(p Player) {
 	// 	p.Player = g.nextPlayer
 	// 	g.nextPlayer++
 	// }
+	// g.mutexPlayers.Lock()
+	// defer g.mutexPlayers.Unlock()
 
 	g.Players[p.GetPlayerId()] = p
 

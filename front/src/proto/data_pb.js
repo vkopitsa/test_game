@@ -61,8 +61,11 @@ proto.messages.Data.toObject = function(includeInstance, msg) {
   var f, obj = {
     y: +jspb.Message.getFieldWithDefault(msg, 1, 0.0),
     x: +jspb.Message.getFieldWithDefault(msg, 2, 0.0),
-    height: jspb.Message.getFieldWithDefault(msg, 3, 0),
-    width: jspb.Message.getFieldWithDefault(msg, 4, 0)
+    yv: +jspb.Message.getFieldWithDefault(msg, 3, 0.0),
+    xv: +jspb.Message.getFieldWithDefault(msg, 4, 0.0),
+    height: jspb.Message.getFieldWithDefault(msg, 5, 0),
+    width: jspb.Message.getFieldWithDefault(msg, 6, 0),
+    color: jspb.Message.getFieldWithDefault(msg, 7, "")
   };
 
   if (includeInstance) {
@@ -108,12 +111,24 @@ proto.messages.Data.deserializeBinaryFromReader = function(msg, reader) {
       msg.setX(value);
       break;
     case 3:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setYv(value);
+      break;
+    case 4:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setXv(value);
+      break;
+    case 5:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setHeight(value);
       break;
-    case 4:
+    case 6:
       var value = /** @type {number} */ (reader.readInt64());
       msg.setWidth(value);
+      break;
+    case 7:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setColor(value);
       break;
     default:
       reader.skipField();
@@ -158,17 +173,38 @@ proto.messages.Data.serializeBinaryToWriter = function(message, writer) {
       f
     );
   }
+  f = message.getYv();
+  if (f !== 0.0) {
+    writer.writeDouble(
+      3,
+      f
+    );
+  }
+  f = message.getXv();
+  if (f !== 0.0) {
+    writer.writeDouble(
+      4,
+      f
+    );
+  }
   f = message.getHeight();
   if (f !== 0) {
     writer.writeInt64(
-      3,
+      5,
       f
     );
   }
   f = message.getWidth();
   if (f !== 0) {
     writer.writeInt64(
-      4,
+      6,
+      f
+    );
+  }
+  f = message.getColor();
+  if (f.length > 0) {
+    writer.writeString(
+      7,
       f
     );
   }
@@ -206,32 +242,77 @@ proto.messages.Data.prototype.setX = function(value) {
 
 
 /**
- * optional int64 height = 3;
+ * optional double yv = 3;
+ * @return {number}
+ */
+proto.messages.Data.prototype.getYv = function() {
+  return /** @type {number} */ (+jspb.Message.getFieldWithDefault(this, 3, 0.0));
+};
+
+
+/** @param {number} value */
+proto.messages.Data.prototype.setYv = function(value) {
+  jspb.Message.setProto3FloatField(this, 3, value);
+};
+
+
+/**
+ * optional double xv = 4;
+ * @return {number}
+ */
+proto.messages.Data.prototype.getXv = function() {
+  return /** @type {number} */ (+jspb.Message.getFieldWithDefault(this, 4, 0.0));
+};
+
+
+/** @param {number} value */
+proto.messages.Data.prototype.setXv = function(value) {
+  jspb.Message.setProto3FloatField(this, 4, value);
+};
+
+
+/**
+ * optional int64 height = 5;
  * @return {number}
  */
 proto.messages.Data.prototype.getHeight = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 5, 0));
 };
 
 
 /** @param {number} value */
 proto.messages.Data.prototype.setHeight = function(value) {
-  jspb.Message.setProto3IntField(this, 3, value);
+  jspb.Message.setProto3IntField(this, 5, value);
 };
 
 
 /**
- * optional int64 width = 4;
+ * optional int64 width = 6;
  * @return {number}
  */
 proto.messages.Data.prototype.getWidth = function() {
-  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 4, 0));
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 6, 0));
 };
 
 
 /** @param {number} value */
 proto.messages.Data.prototype.setWidth = function(value) {
-  jspb.Message.setProto3IntField(this, 4, value);
+  jspb.Message.setProto3IntField(this, 6, value);
+};
+
+
+/**
+ * optional string color = 7;
+ * @return {string}
+ */
+proto.messages.Data.prototype.getColor = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
+};
+
+
+/** @param {string} value */
+proto.messages.Data.prototype.setColor = function(value) {
+  jspb.Message.setProto3StringField(this, 7, value);
 };
 
 

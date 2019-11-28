@@ -28,6 +28,8 @@ var (
 )
 
 type server struct {
+	// sync.RWMutex
+
 	logLevel int
 
 	In  chan *messages.Message
@@ -81,7 +83,7 @@ func (s *server) Listen(address string) {
 
 		if err == nil {
 			serverConn := NewServerConn(conn, nil)
-			serverConn.PlayerId = i
+			serverConn.SetPlayerId(i)
 			s.NewPlayers <- &IncomingPlayer{Conn: serverConn}
 
 			i++
@@ -93,6 +95,8 @@ func (s *server) Listen(address string) {
 }
 
 func (s *server) StopListening() {
+	// s.Lock()
+	// defer s.Unlock()
 	s.e.Close()
 }
 
@@ -100,7 +104,9 @@ func (s *server) accept() {
 	for {
 		np := <-s.NewPlayers
 
+		// s.Lock()
 		p := NewPlayer("name", np.Conn)
+		// s.Unlock()
 
 		go s.handleNewPlayer(p)
 	}
@@ -116,8 +122,6 @@ func (s *server) handleNewPlayer(pl Player) {
 	}()
 
 	for e := range pl.GetIn() {
-
-		// log.Println("handleNewPlayer", e)
 
 		switch e.GetType() {
 		case messages.Message_HELLO:

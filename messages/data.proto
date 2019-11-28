@@ -4,6 +4,11 @@ package messages;
 message Data {
     double y = 1;
     double x = 2;
-    int64 height = 3;
-    int64 width = 4;
+    // y velocity
+    double yv = 3;
+    // x velocity
+    double xv = 4;
+    int64 height = 5;
+    int64 width = 6;
+    string color = 7;
 }

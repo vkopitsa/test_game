@@ -1,7 +1,12 @@
 package server
 
 import (
+	"fmt"
+	"image/color"
+	"image/color/palette"
+	"math/rand"
 	"server/messages"
+	"sync"
 	"time"
 )
 
@@ -11,6 +16,8 @@ type Position struct {
 }
 
 type player struct {
+	// sync.RWMutex
+
 	Name string
 
 	*Conn
@@ -31,6 +38,7 @@ type player struct {
 
 	speed  float64
 	radius float64
+	color  color.Color
 }
 
 type Player interface {
@@ -41,9 +49,16 @@ type Player interface {
 	AddCommand(message *messages.Command)
 	Tick(dt float64, worldWidth int64, worldHeight int64)
 	GetPosition(dt float64) *Position
+	GetCommand() (float64, float64)
+	GetColor() string
 }
 
+var mutex sync.Mutex
+
 func NewPlayer(name string, conn *Conn) Player {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if conn == nil {
 		conn = &Conn{}
 	}
@@ -57,6 +72,7 @@ func NewPlayer(name string, conn *Conn) Player {
 		// position: Position{},
 		speed:  200,
 		radius: 50,
+		color:  palette.WebSafe[rand.Intn(len(palette.WebSafe))],
 	}
 
 	return p
@@ -66,8 +82,18 @@ func (p *player) GetIn() chan *messages.Message {
 	return p.Conn.In
 }
 
+func (p *player) GetColor() string {
+	//return p.color.RGBA()
+	R, G, B, _ := p.color.RGBA()
+	return fmt.Sprintf("#%02x%02x%02x", uint8(R*255.0), uint8(G*255.0), uint8(B*255.0))
+}
+
 func (p *player) AddCommand(message *messages.Command) {
+	// p.Lock()
+	// defer p.Unlock()
+
 	p.command = message
+	//p.RUnlock()
 }
 
 func (p *player) Close() {
@@ -75,6 +101,9 @@ func (p *player) Close() {
 }
 
 func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
+	//p.RLock()
+	// p.Lock()
+	// defer p.Unlock()
 
 	if p.command == nil {
 		return
@@ -134,8 +163,20 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 	// fmt.Println(p.command, "command")
 	// fmt.Println(p.position, "position")
 	// fmt.Println((dt * p.speed), dt, "(dt * p.speed)")
+
+	//p.RUnlock()
 }
 
 func (p *player) GetPosition(dt float64) *Position {
+	// p.Lock()
+	// defer p.Unlock()
+
 	return p.position
+}
+
+func (p *player) GetCommand() (float64, float64) {
+	// p.Lock()
+	// defer p.Unlock()
+
+	return p.command.GetYv(), p.command.GetXv()
 }

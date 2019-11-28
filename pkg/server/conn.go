@@ -4,7 +4,6 @@ import (
 	//"fmt"
 	"log"
 	"server/messages"
-	"sync"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -38,20 +37,21 @@ const (
 )
 
 type Conn struct {
+	// sync.RWMutex
 	conn         *websocket.Conn
-	LastTransfer time.Time
-	Terminated   bool
+	lastTransfer time.Time
+	terminated   bool
 
-	PlayerId   int32
+	playerId   int32
 	In         chan *messages.Message
 	out        chan *messages.Message
 	forwardOut chan *messages.Message
 
-	*sync.WaitGroup
+	//*sync.WaitGroup
 }
 
 func NewServerConn(conn *websocket.Conn, forwardOut chan *messages.Message) *Conn {
-	c := Conn{conn: conn, WaitGroup: new(sync.WaitGroup)}
+	c := Conn{conn: conn}
 
 	c.In = make(chan *messages.Message, CommandQueueSize)
 	c.out = make(chan *messages.Message, CommandQueueSize)
@@ -60,7 +60,7 @@ func NewServerConn(conn *websocket.Conn, forwardOut chan *messages.Message) *Con
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(wait))
 
-	c.LastTransfer = time.Now()
+	c.SetLastTransfer(time.Now())
 
 	if conn == nil {
 		// Local instance
@@ -83,6 +83,8 @@ func (s *Conn) handleRead() {
 	//var gc interface{}
 
 	for {
+		//s.RLock()
+
 		messageType, msg, err := s.conn.ReadMessage()
 		if err != nil || messageType != websocket.BinaryMessage {
 			// c.Logger().Error(err)
@@ -125,12 +127,15 @@ func (s *Conn) handleRead() {
 		// 	// c.Logger().Error(err)
 		// 	return nil
 		// }
+
+		//s.RUnlock()
 	}
 
 	s.Close()
 }
 
 func (s *Conn) handleWrite() {
+	//s.Lock()
 	if s.conn == nil {
 		for range s.out {
 			//s.Done()
@@ -145,7 +150,7 @@ func (s *Conn) handleWrite() {
 	// )
 
 	for e := range s.out {
-		if s.Terminated {
+		if s.GetTerminated() {
 			// 	s.Done()
 			continue
 		}
@@ -166,7 +171,7 @@ func (s *Conn) handleWrite() {
 		}
 
 		//s.Done()
-		s.LastTransfer = time.Now()
+		s.SetLastTransfer(time.Now())
 
 		// msg = GameCommandTransport{Command: e.Command()}
 
@@ -235,10 +240,12 @@ func (s *Conn) handleWrite() {
 	// 	//s.conn.SetWriteDeadline(time.Time{})
 	// 	s.Done()
 	// }
+
+	//s.Unlock()
 }
 
 func (s *Conn) Write(m *messages.Message) {
-	if s == nil || s.Terminated {
+	if s == nil || s.GetTerminated() {
 		return
 	}
 
@@ -247,11 +254,14 @@ func (s *Conn) Write(m *messages.Message) {
 }
 
 func (s *Conn) Close() {
-	if s.Terminated {
+	if s.GetTerminated() {
 		return
 	}
 
-	s.Terminated = true
+	// s.Lock()
+	// defer s.Unlock()
+
+	s.SetTerminated(true)
 
 	s.conn.Close()
 
@@ -262,6 +272,37 @@ func (s *Conn) Close() {
 	}()
 }
 
+func (s *Conn) SetLastTransfer(now time.Time) {
+	// s.Lock()
+	// defer s.Unlock()
+
+	s.lastTransfer = now
+}
+
+func (s *Conn) SetPlayerId(i int32) {
+	// s.Lock()
+	// defer s.Unlock()
+
+	s.playerId = i
+}
+
 func (s Conn) GetPlayerId() int32 {
-	return s.PlayerId
+	// s.Lock()
+	// defer s.Unlock()
+
+	return s.playerId
+}
+
+func (s Conn) GetTerminated() bool {
+	// s.Lock()
+	// defer s.Unlock()
+
+	return s.terminated
+}
+
+func (s *Conn) SetTerminated(terminated bool) {
+	// s.Lock()
+	// defer s.Unlock()
+
+	s.terminated = terminated
 }

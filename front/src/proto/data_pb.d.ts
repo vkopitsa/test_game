@@ -10,11 +10,20 @@ export class Data extends jspb.Message {
   getX(): number;
   setX(value: number): void;
 
+  getYv(): number;
+  setYv(value: number): void;
+
+  getXv(): number;
+  setXv(value: number): void;
+
   getHeight(): number;
   setHeight(value: number): void;
 
   getWidth(): number;
   setWidth(value: number): void;
+
+  getColor(): string;
+  setColor(value: string): void;
 
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Data.AsObject;
@@ -30,8 +39,11 @@ export namespace Data {
   export type AsObject = {
     y: number,
     x: number,
+    yv: number,
+    xv: number,
     height: number,
     width: number,
+    color: string,
   }
 }
 

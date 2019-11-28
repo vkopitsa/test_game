@@ -7,7 +7,7 @@
     },
     "description": "The simple game",
     "scripts": {
-        "start": "webpack-dev-server --open",
+        "start": "webpack-dev-server",
         "build": "webpack"
     },
     "dependencies": {},
