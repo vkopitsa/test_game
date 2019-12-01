@@ -12,19 +12,6 @@ import (
 
 const CommandQueueSize = 10
 
-// type Command int
-
-// type GameCommandTransport struct {
-// 	Command Command
-// 	Data    []byte
-// }
-
-// type GameCommandInterface interface {
-// 	Command() Command
-// 	Source() int
-// 	SetSource(int)
-// }
-
 const (
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second
@@ -46,8 +33,6 @@ type Conn struct {
 	In         chan *messages.Message
 	out        chan *messages.Message
 	forwardOut chan *messages.Message
-
-	//*sync.WaitGroup
 }
 
 func NewServerConn(conn *websocket.Conn, forwardOut chan *messages.Message) *Conn {
@@ -80,15 +65,12 @@ func (s *Conn) handleRead() {
 		return
 	}
 
-	//var gc interface{}
-
 	for {
 		//s.RLock()
 
 		messageType, msg, err := s.conn.ReadMessage()
 		if err != nil || messageType != websocket.BinaryMessage {
 			// c.Logger().Error(err)
-			// fmt.Println("error", messageType != websocket.BinaryMessage)
 			break
 		}
 
@@ -98,37 +80,7 @@ func (s *Conn) handleRead() {
 			break
 		}
 
-		// switch message.Type {
-		// case messages.Message_HELLO:
-		// 	hello := &messages.Hello{}
-		// 	err = proto.Unmarshal(message.Data, hello)
-		// 	if err != nil {
-		// 		break
-		// 	}
-
-		// 	//fmt.Println("hello", hello)
-
-		// 	//_ = s.conn.WriteMessage(websocket.BinaryMessage, message.Data)
-
-		// 	// s.out <
-		// 	gc = hello
-		// default:
-		// 	log.Println("unknown serverconn command", message.Type.String())
-		// 	continue
-		// }
-
-		//s.addSourceID(gc)
 		s.In <- message
-		//s.out <- message
-
-		// Write
-		// err = ws.WriteMessage(websocket.BinaryMessage, data)
-		// if err != nil {
-		// 	// c.Logger().Error(err)
-		// 	return nil
-		// }
-
-		//s.RUnlock()
 	}
 
 	s.Close()
@@ -143,20 +95,11 @@ func (s *Conn) handleWrite() {
 		return
 	}
 
-	// var (
-	// 	msg GameCommandTransport
-	// 	j   []byte
-	// 	err error
-	// )
-
 	for e := range s.out {
 		if s.GetTerminated() {
 			// 	s.Done()
 			continue
 		}
-
-		// message := &messages.Message{}
-		// message.Data = []byte{byte(1)}
 
 		data, err := proto.Marshal(e)
 		if err != nil {
@@ -166,80 +109,12 @@ func (s *Conn) handleWrite() {
 		err = s.conn.WriteMessage(websocket.BinaryMessage, data)
 		if err != nil {
 			// c.Logger().Error(err)
-			//log.Fatal(err)
 			s.Close()
 		}
 
 		//s.Done()
 		s.SetLastTransfer(time.Now())
-
-		// msg = GameCommandTransport{Command: e.Command()}
-
-		// msg.Data, err = json.Marshal(e)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-
-		// j, err = json.Marshal(msg)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-		// j = append(j, '\n')
-
-		// err = s.conn.SetWriteDeadline(time.Now().Add(ConnTimeout))
-		// if err != nil {
-		// 	s.Close()
-		// }
-
-		// _, err = s.conn.Write(j)
-		// if err != nil {
-		// 	s.Close()
-		// }
-
-		// s.LastTransfer = time.Now()
-		// s.conn.SetWriteDeadline(time.Time{})
-		// s.Done()
 	}
-
-	// var (
-	// 	msg GameCommandTransport
-	// 	j   []byte
-	// 	err error
-	// )
-
-	// for e := range s.out {
-	// 	if s.Terminated {
-	// 		s.Done()
-	// 		continue
-	// 	}
-
-	// 	msg = GameCommandTransport{Command: e.Command()}
-
-	// 	msg.Data, err = json.Marshal(e)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-
-	// 	j, err = json.Marshal(msg)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	j = append(j, '\n')
-
-	// 	err = s.conn.SetWriteDeadline(time.Now().Add(ConnTimeout))
-	// 	if err != nil {
-	// 		s.Close()
-	// 	}
-
-	// 	_, err = s.conn.Write(j)
-	// 	if err != nil {
-	// 		s.Close()
-	// 	}
-
-	// 	s.LastTransfer = time.Now()
-	// 	//s.conn.SetWriteDeadline(time.Time{})
-	// 	s.Done()
-	// }
 
 	//s.Unlock()
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"image/color/palette"
+	"math"
 	"math/rand"
 	"server/messages"
 	"sync"
@@ -15,6 +16,11 @@ type Position struct {
 	x float64
 }
 
+type PlayerInfo struct {
+	Id    int32
+	Score int64
+}
+
 type player struct {
 	// sync.RWMutex
 
@@ -22,7 +28,7 @@ type player struct {
 
 	*Conn
 
-	// Score int
+	score int64
 	// Preview *mino.Matrix
 	// Matrix  *mino.Matrix
 	Moved time.Time     // Time of last piece move
@@ -51,6 +57,12 @@ type Player interface {
 	GetPosition(dt float64) *Position
 	GetCommand() (float64, float64)
 	GetColor() string
+	IsNear(other Player, playerNearValue float64) bool
+	GetTerminated() bool
+	GetScore() int64
+	GetRadius() float64
+	Overlaps(other Player) bool
+	RevertDirection()
 }
 
 var mutex sync.Mutex
@@ -64,15 +76,13 @@ func NewPlayer(name string, conn *Conn) Player {
 	}
 
 	p := &player{
-		Name:  name,
-		Conn:  conn,
-		Moved: time.Now(),
-		// commands: make([]*messages.Command, 0, 100),
-		// command:  &messages.Command{},
-		// position: Position{},
-		speed:  200,
-		radius: 50,
-		color:  palette.WebSafe[rand.Intn(len(palette.WebSafe))],
+		Name:     name,
+		Conn:     conn,
+		Moved:    time.Now(),
+		speed:    200,
+		radius:   50,
+		color:    palette.WebSafe[rand.Intn(len(palette.WebSafe))],
+		position: &Position{},
 	}
 
 	return p
@@ -93,7 +103,6 @@ func (p *player) AddCommand(message *messages.Command) {
 	// defer p.Unlock()
 
 	p.command = message
-	//p.RUnlock()
 }
 
 func (p *player) Close() {
@@ -101,7 +110,6 @@ func (p *player) Close() {
 }
 
 func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
-	//p.RLock()
 	// p.Lock()
 	// defer p.Unlock()
 
@@ -109,18 +117,6 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 		return
 	}
 
-	if p.position == nil {
-		p.position = &Position{}
-	}
-
-	// if (this.direction == Direction.Left)
-	// this.x -= this.speed * dt;
-	// if (this.direction == Direction.Up)
-	// this.y -= this.speed * dt;
-	// if (this.direction == Direction.Right)
-	// this.x += this.speed * dt;
-	// if (this.direction == Direction.Down)
-	// this.y += this.speed * dt;
 	if p.command.GetYv() != 0 {
 		p.position.y = p.position.y + (dt * p.speed * p.command.GetYv())
 	}
@@ -128,17 +124,7 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 		p.position.x = p.position.x + (dt * p.speed * p.command.GetXv())
 	}
 
-	// if (this.y + this.radius > worldHeight || this.y - this.radius < 0) {
-	// 	this.direction = (this.y + this.radius) > worldHeight ? Direction.Up : Direction.Down;
-	//   }
-
-	//   if (this.x + this.radius > worldWidth || this.x - this.radius < 0) {
-	// 	this.direction = (this.x + this.radius) > worldWidth ? Direction.Left : Direction.Right;
-	//   }
-
 	if p.position.y+p.radius > float64(worldHeight) || p.position.y-p.radius < -p.radius {
-		// p.direction = (p.position.y + p.radius) > worldHeight ? Direction.Up : Direction.Down;
-
 		// Up
 		if (p.position.y + p.radius) > float64(worldHeight) {
 			p.command.Yv = -1
@@ -149,8 +135,6 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 	}
 
 	if p.position.x+p.radius > float64(worldWidth) || p.position.x-p.radius < -p.radius {
-		// p.direction = (p.position.x + p.radius) > worldWidth ? Direction.Left : Direction.Right;
-
 		// Left
 		if (p.position.x + p.radius) > float64(worldWidth) {
 			p.command.Xv = -1
@@ -160,11 +144,19 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 		}
 	}
 
-	// fmt.Println(p.command, "command")
-	// fmt.Println(p.position, "position")
-	// fmt.Println((dt * p.speed), dt, "(dt * p.speed)")
+	// score
+	// p.score++
+}
 
-	//p.RUnlock()
+func (p *player) RevertDirection() {
+	if p.command == nil {
+		return
+	}
+	p.command.Yv = p.command.Yv * -1
+	p.command.Xv = p.command.Xv * -1
+
+	// score
+	p.score++
 }
 
 func (p *player) GetPosition(dt float64) *Position {
@@ -179,4 +171,28 @@ func (p *player) GetCommand() (float64, float64) {
 	// defer p.Unlock()
 
 	return p.command.GetYv(), p.command.GetXv()
+}
+
+func (p *player) GetScore() int64 {
+	return p.score
+}
+
+func (p *player) GetRadius() float64 {
+	return p.radius
+}
+
+// Determines is a player is near other player.
+func (p *player) IsNear(other Player, playerNearValue float64) bool {
+	xdiff := math.Abs(p.GetPosition(0).x - other.GetPosition(0).x)
+	ydiff := math.Abs(p.GetPosition(0).y - other.GetPosition(0).y)
+	mdiff := math.Max(xdiff, ydiff)
+	return mdiff < playerNearValue
+}
+
+func (p *player) Overlaps(other Player) bool {
+	dx := p.GetPosition(0).x - other.GetPosition(0).x
+	dy := p.GetPosition(0).y - other.GetPosition(0).y
+	distance := math.Sqrt(dx*dx + dy*dy)
+
+	return distance < p.GetRadius()+other.GetRadius()
 }

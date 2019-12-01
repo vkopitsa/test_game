@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"server/messages"
+	"sort"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -11,6 +12,11 @@ import (
 type GameCommand struct {
 	Player  Player
 	Message *messages.Message
+}
+
+type GameInfo struct {
+	Count       int64
+	PlayerInfos []*PlayerInfo
 }
 
 type Game struct {
@@ -24,41 +30,21 @@ type Game struct {
 	// 5000, 3000
 	WorldWidth  int64
 	WorldHeight int64
+
+	PlayerNearValue float64
+
+	quit chan bool
 }
 
 func NewGame() *Game {
-	// minos, err := mino.Generate(rank)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	g := &Game{
-		// Name:       "netris",
-		// Rank:       rank,
-		// Minos:      minos,
-		// nextPlayer: 1,
-		Players: make(map[int32]Player),
-		// Event:      make(chan interface{}, CommandQueueSize),
-		// draw:       draw,
-		// logger:     logger,
-		// Mutex:      new(sync.Mutex)
+		quit:        make(chan bool),
+		Players:     make(map[int32]Player),
 		WorldWidth:  5000,
 		WorldHeight: 3000,
 		// mutexPlayers: sync.RWMutex{},
+		PlayerNearValue: 1500,
 	}
-
-	// if out != nil {
-	// 	g.out = out
-	// } else {
-	// 	g.LocalPlayer = PlayerHost
-	// 	g.out = func(commandInterface GameCommandInterface) {
-	// 		// Do nothing
-	// 	}
-	// }
-
-	// g.FallTime = 850 * time.Millisecond
-
-	// go g.handleDropTerminatedPlayers()
 
 	return g
 }
@@ -70,6 +56,12 @@ func (g *Game) Start() {
 	go g.gameLoop()
 }
 
+func (g *Game) Stop() {
+	g.Started = false
+
+	g.quit <- true
+}
+
 func (g *Game) gameLoop() {
 	tick := time.Tick((1000 / 30) * time.Millisecond)
 
@@ -78,15 +70,13 @@ func (g *Game) gameLoop() {
 
 	for {
 		select {
+		case <-g.quit:
+			// stop
+			return
 		case <-tick:
 			dt = float64(time.Since(last).Microseconds()/1000) / 1000.0
-			// var now = Date.now();
-			// var dt = (now - this.lastTime) / 1000.0;
-			// log.Println("FPS", dt)
-			// _ = dt
 
 			g.processInputs(dt)
-			// g.sendGameState(dt)
 
 			last = time.Now()
 		}
@@ -101,6 +91,16 @@ func (g *Game) processInputs(dt float64) {
 		//g.mutexPlayers.Unlock()
 
 		p.Tick(dt, g.WorldWidth, g.WorldHeight)
+
+		// Collision check
+		for _, otherPlayer := range g.Players {
+			if p.GetPlayerId() != otherPlayer.GetPlayerId() && p.IsNear(otherPlayer, g.PlayerNearValue) {
+				if p.GetTerminated() == false && otherPlayer.GetTerminated() == false && p.Overlaps(otherPlayer) {
+					p.RevertDirection()
+					otherPlayer.RevertDirection()
+				}
+			}
+		}
 
 		position := p.GetPosition(dt)
 		if position == nil {
@@ -125,7 +125,7 @@ func (g *Game) processInputs(dt float64) {
 		}
 
 		//g.mutexPlayers.Lock()
-		g.WriteAll(&messages.Message{
+		g.WriteNear(p, &messages.Message{
 			PlayerId: p.GetPlayerId(),
 			Type:     messages.Message_DATA,
 			Data:     data,
@@ -148,47 +148,53 @@ func (g *Game) WriteAll(m *messages.Message) {
 	}
 }
 
+func (g *Game) WriteNear(p Player, m *messages.Message) {
+	for i := range g.Players {
+		if p.IsNear(g.Players[i], g.PlayerNearValue) {
+			g.Players[i].Write(m)
+		}
+	}
+}
+
 func (g *Game) AddPlayer(p Player) {
-	// if p.Player == PlayerUnknown {
-	// 	if g.LocalPlayer != PlayerHost {
-	// 		return
-	// 	}
-
-	// 	p.Player = g.nextPlayer
-	// 	g.nextPlayer++
-	// }
-	// g.mutexPlayers.Lock()
-	// defer g.mutexPlayers.Unlock()
-
 	g.Players[p.GetPlayerId()] = p
+}
 
-	// TODO Verify rank-2 is valid for all playable rank previews
-	// p.Preview = mino.NewMatrix(g.Rank, g.Rank-2, 0, 1, g.Event, g.draw, mino.MatrixPreview)
-	// p.Preview.PlayerName = p.Name
+func (g *Game) TerminatedPlayers() {
+	for i := range g.Players {
+		if g.Players[i].GetTerminated() {
+			g.WriteAll(&messages.Message{
+				PlayerId: g.Players[i].GetPlayerId(),
+				Type:     messages.Message_QUIT,
+			})
 
-	// p.Matrix = mino.NewMatrix(10, 20, 4, 1, g.Event, g.draw, mino.MatrixStandard)
-	// p.Matrix.PlayerName = p.Name
+			delete(g.Players, i)
+		}
+	}
+}
 
-	// if g.Started {
-	// 	p.Matrix.GameOver = true
-	// }
+func (g *Game) GetInfo() *GameInfo {
+	infoPlayers := []*PlayerInfo{}
+	for i := range g.Players {
+		if g.Players[i].GetScore() == 0 {
+			continue
+		}
+		infoPlayers = append(infoPlayers, &PlayerInfo{
+			Id:    g.Players[i].GetPlayerId(),
+			Score: g.Players[i].GetScore(),
+		})
+	}
 
-	// if g.LocalPlayer == PlayerHost {
-	// 	p.Write(&GameCommandJoinGame{PlayerID: p.Player})
+	sort.Slice(infoPlayers, func(i, j int) bool {
+		return infoPlayers[i].Score > infoPlayers[j].Score
+	})
 
-	// 	var players = make(map[int]string)
-	// 	for _, player := range g.Players {
-	// 		players[player.Player] = player.Name
-	// 	}
+	if len(infoPlayers) > 5 {
+		infoPlayers = infoPlayers[0:5]
+	}
 
-	// 	g.WriteAllL(&GameCommandUpdateGame{Players: players})
-
-	// 	if g.Started {
-	// 		p.Write(&GameCommandStartGame{Seed: g.Seed, Started: g.Started})
-	// 	}
-
-	// 	if len(g.Players) > 1 {
-	// 		g.WriteMessage(fmt.Sprintf("%s has joined the game", p.Name))
-	// 	}
-	// }
+	return &GameInfo{
+		Count:       int64(len(g.Players)),
+		PlayerInfos: infoPlayers,
+	}
 }

@@ -12,6 +12,7 @@ message Message {
         JOINED = 6;
         DIRECTION = 7;
         COMMAND = 8;
+        INFO = 9;
       }
     Type type = 1;
     bytes data = 2;

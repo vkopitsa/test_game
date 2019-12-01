@@ -4,7 +4,6 @@ import (
 	"log"
 	"server/messages"
 
-	//"strings"
 	"time"
 
 	"github.com/gogo/protobuf/proto"
@@ -12,10 +11,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
-
-// const (
-// 	DefaultPort = 8080
-// )
 
 const (
 	LogStandard = iota
@@ -126,41 +121,11 @@ func (s *server) handleNewPlayer(pl Player) {
 		switch e.GetType() {
 		case messages.Message_HELLO:
 			log.Println(e)
-		// 	if _, ok := e.(*GameCommandListGames); ok {
-		// 		var gl []*ListedGame
-
-		// 		for _, g := range s.Games {
-		// 			if g.Terminated {
-		// 				continue
-		// 			}
-
-		// 			gl = append(gl, &ListedGame{ID: g.ID, Name: g.Name, Players: len(g.Players), MaxPlayers: g.MaxPlayers, SpeedLimit: g.SpeedLimit})
-		// 		}
-
-		// 		sort.Slice(gl, func(i, j int) bool {
-		// 			if gl[i].Players == gl[j].Players {
-		// 				return gl[i].Name < gl[j].Name
-		// 			}
-
-		// 			return gl[i].Players > gl[j].Players
-		// 		})
-
-		// 		pl.Write(&GameCommandListGames{Games: gl})
-		// 	}
 		case messages.Message_JOIN:
-			// 	if p, ok := e.(*GameCommandJoinGame); ok {
-			// 		pl.Name = Nickname(p.Name)
-
 			g := s.FindGame(pl)
 			if g == nil {
 				return
 			}
-
-			// 		if p.Listing.Name == "" {
-			// 			g.Logf(LogStandard, "Player %s joined %s", pl.Name, g.Name)
-			// 		} else {
-			// 			g.Logf(LogStandard, "Player %s created new game %s", pl.Name, g.Name)
-			// 		}
 
 			g.AddPlayer(pl)
 
@@ -172,10 +137,6 @@ func (s *server) handleNewPlayer(pl Player) {
 
 			go s.handleGameCommands(pl, g)
 			return
-
-			// 		handled = true
-			// 		return
-			//}
 		}
 	}
 }
@@ -192,81 +153,60 @@ func (s *server) FindGame(p Player) *Game {
 
 func (s *server) handle() {
 	for {
-		time.Sleep(1 * time.Minute)
+		time.Sleep(1 * time.Second)
 
 		// s.Lock()
-		s.removeTerminatedGames()
+		s.removeTerminatedPlayers()
 		// s.Unlock()
+
+		s.updateGameInfo()
 	}
 }
 
-func (s *server) removeTerminatedGames() {
-	// for gameID, g := range s.Games {
-	// 	if g != nil && !g.Terminated {
-	// 		continue
-	// 	}
+func (s *server) updateGameInfo() {
+	for i := range s.Games {
+		info := s.Games[i].GetInfo()
 
-	// 	delete(s.Games, gameID)
-	// 	g = nil
-	// }
+		playerInfos := []*messages.PlayerInfo{}
+		for _, playerInfo := range info.PlayerInfos {
+			playerInfos = append(playerInfos, &messages.PlayerInfo{
+				Id:    playerInfo.Id,
+				Score: playerInfo.Score,
+			})
+		}
+
+		data, err := proto.Marshal(&messages.Info{
+			Count:   info.Count,
+			Players: playerInfos,
+		})
+		if err != nil {
+			return
+		}
+
+		s.Games[i].WriteAll(&messages.Message{
+			// PlayerId: pl.GetPlayerId(),
+			Type: messages.Message_INFO,
+			Data: data,
+		})
+	}
+}
+
+func (s *server) removeTerminatedPlayers() {
+	for i := range s.Games {
+		s.Games[i].TerminatedPlayers()
+
+		if len(s.Games[i].Players) == 0 {
+			s.Games[i].Stop()
+			delete(s.Games, i)
+		}
+	}
 }
 
 func (s *server) handleGameCommands(pl Player, g *Game) {
-	// var (
-	// 	msgJSON []byte
-	// 	err     error
-	// )
 	for e := range pl.GetIn() {
-		// c := e.Command()
-		// if (c != CommandPing && c != CommandPong && c != CommandUpdateMatrix) || g.LogLevel >= LogVerbose {
-		// 	msgJSON, err = json.Marshal(e)
-		// 	if err != nil {
-		// 		log.Fatal(err)
-		// 	}
-
-		// 	g.Logf(LogStandard, "%d -> %s %s", e.Source(), e.Command(), msgJSON)
-		// }
-
-		// g.Lock()
-
-		log.Println("handleGameCommands", e)
-
 		switch e.GetType() {
 		case messages.Message_QUIT:
-			//g.RemovePlayerL(p.SourcePlayer)
-			log.Println("handleGameCommands quit", e)
-		// case messages.Message_DATA:
-		// 	data := &messages.Data{}
-		// 	err := proto.Unmarshal(e.GetData(), data)
-		// 	if err != nil {
-		// 		// log.Println(err)
-		// 		continue
-		// 	}
-
-		// if _, ok := g.Players[e.GetPlayerId()]; ok {
-		// newNick := Nickname(p.Nickname)
-		// if newNick != "" && newNick != player.Name {
-		// 	oldNick := player.Name
-		// 	player.Name = newNick
-
-		// 	g.Logf(LogStandard, "* %s is now known as %s", oldNick, newNick)
-		// g.WriteAll(&messages.Message{
-		// 	PlayerId: pl.GetPlayerId(),
-		// 	Type:     messages.Message_DATA,
-		// 	Data:     e.GetData(),
-		// })
-		// case messages.Message_DIRECTION:
-		// data := &messages.Data{}
-		// err := proto.Unmarshal(e.GetData(), data)
-		// if err != nil {
-		// 	continue
-		// }
-
-		// g.WriteAll(&messages.Message{
-		// 	PlayerId: pl.GetPlayerId(),
-		// 	Type:     messages.Message_DIRECTION,
-		// 	Data:     e.GetData(),
-		// })
+			pl.Close()
 		case messages.Message_COMMAND:
 			cmd := &messages.Command{}
 			err := proto.Unmarshal(e.GetData(), cmd)
@@ -276,93 +216,5 @@ func (s *server) handleGameCommands(pl Player, g *Game) {
 
 			pl.AddCommand(cmd)
 		}
-		// case *GameCommandDisconnect:
-		// 	g.RemovePlayerL(p.SourcePlayer)
-		// case *GameCommandMessage:
-		// 	if player, ok := g.Players[p.SourcePlayer]; ok {
-		// 		s.Logf("<%s> %s", player.Name, p.Message)
-
-		// 		msg := strings.ReplaceAll(strings.TrimSpace(p.Message), "\n", "")
-		// 		if msg != "" {
-		// 			g.WriteAllL(&GameCommandMessage{Player: p.SourcePlayer, Message: msg})
-		// 		}
-		// 	}
-		// case *GameCommandNickname:
-		// 	if player, ok := g.Players[p.SourcePlayer]; ok {
-		// 		newNick := Nickname(p.Nickname)
-		// 		if newNick != "" && newNick != player.Name {
-		// 			oldNick := player.Name
-		// 			player.Name = newNick
-
-		// 			g.Logf(LogStandard, "* %s is now known as %s", oldNick, newNick)
-		// 			g.WriteAllL(&GameCommandNickname{Player: p.SourcePlayer, Nickname: newNick})
-		// 		}
-		// 	}
-		// case *GameCommandUpdateMatrix:
-		// 	if pl, ok := g.Players[p.SourcePlayer]; ok {
-		// 		for _, m := range p.Matrixes {
-		// 			pl.Matrix.Replace(m)
-
-		// 			if g.SpeedLimit > 0 && m.Speed > g.SpeedLimit+5 && time.Since(g.TimeStarted) > 7*time.Second {
-		// 				pl.Matrix.SetGameOver()
-
-		// 				g.WriteMessage(fmt.Sprintf("%s went too fast and crashed", pl.Name))
-		// 				g.WriteAllL(&GameCommandGameOver{Player: p.SourcePlayer})
-		// 			}
-		// 		}
-
-		// 		m := pl.Matrix
-		// 		spawn := m.SpawnLocation(m.P)
-		// 		if m.P != nil && spawn.X >= 0 && spawn.Y >= 0 && m.P.X != spawn.X {
-		// 			pl.Moved = time.Now()
-		// 			pl.Idle = 0
-		// 		}
-		// 	}
-		// case *GameCommandGameOver:
-		// 	g.Players[p.SourcePlayer].Matrix.SetGameOver()
-
-		// 	g.WriteMessage(fmt.Sprintf("%s was knocked out", g.Players[p.SourcePlayer].Name))
-		// 	g.WriteAllL(&GameCommandGameOver{Player: p.SourcePlayer})
-		// case *GameCommandSendGarbage:
-		// 	leastGarbagePlayer := -1
-		// 	leastGarbage := -1
-		// 	for playerID, player := range g.Players {
-		// 		if playerID == p.SourcePlayer || player.Matrix.GameOver {
-		// 			continue
-		// 		}
-
-		// 		if leastGarbage == -1 || player.totalGarbageReceived < leastGarbage {
-		// 			leastGarbagePlayer = playerID
-		// 			leastGarbage = player.totalGarbageReceived
-		// 		}
-		// 	}
-
-		// 	if leastGarbagePlayer != -1 {
-		// 		g.Players[leastGarbagePlayer].totalGarbageReceived += p.Lines
-		// 		g.Players[leastGarbagePlayer].pendingGarbage += p.Lines
-
-		// 		g.Players[p.SourcePlayer].totalGarbageSent += p.Lines
-		// 	}
-		// case *GameCommandStats:
-		// 	players := 0
-		// 	games := 0
-
-		// 	for _, g := range s.Games {
-		// 		players += len(g.Players)
-		// 		games++
-		// 	}
-
-		// 	g.Players[p.SourcePlayer].Write(&GameCommandStats{Created: s.created, Players: players, Games: games})
-		// }
-
-		// g.Unlock()
 	}
 }
-
-// func NetworkAndAddress(address string) (string, string) {
-// 	if !strings.Contains(address, `:`) {
-// 		address = fmt.Sprintf("%s:%d", address, DefaultPort)
-// 	}
-
-// 	return "tcp", address
-// }

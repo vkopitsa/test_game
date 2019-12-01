@@ -6,6 +6,11 @@ import { Player } from './player';
 import { Map as GameMap } from './map';
 import { Camera } from "./camera";
 import { Data } from './proto/data_pb';
+import { Info } from './proto/info_pb';
+import { GameInfo } from './gameInfo';
+import { Control } from './control';
+
+export class Point {constructor(public x = 0, public y = 0) {}};
 
 export enum Direction {
   Stop = 0,
@@ -20,12 +25,10 @@ export class Game {
   private readonly ctx: CanvasRenderingContext2D; // HTML Canvas's 2D context
   private canvasWidth: number = 0; // width of the canvas
   private canvasHeight: number = 0; // height of the canvas
-  // private readonly ball = new Ball(50, 50); // create a new ball with x and y 50 and other properties default
   private lastTime: number = 0;
   private gameTime: number = 0;
   private playDirection: Direction = Direction.Stop;
   private previousPlayDirection: Direction = Direction.Stop;
-  // private readonly player: Player = new Player(50, 50);
   private playerId: number = 0;
   private readonly players: Map<number,Player> = new Map<number,Player>();
 
@@ -35,9 +38,15 @@ export class Game {
   private map: GameMap;
   private camera: Camera;
 
+  private control: Control;
+
+  private infoEl: GameInfo = new GameInfo();
+
   constructor(canvas: HTMLCanvasElement, private communication: IСommunication) {
     this.ctx = canvas.getContext('2d')!;
     this.resizeCanvasToDisplaySize(this.ctx.canvas);
+
+    this.control = new Control(this.ctx.canvas.width, this.ctx.canvas.height);
 
     const width = 5000;
     const height = 3000;
@@ -52,68 +61,53 @@ export class Game {
     // Setup the camera
     this.camera = new Camera(0, 0, vWidth, vHeight, width, height);
 
+    // Setup the control
     const that = this;
     window.addEventListener('keydown', function(event) {
-      switch (event.keyCode) {
-        case 37: // Left
-          that.playDirection = Direction.Left;
-        break;
-    
-        case 38: // Up
-        that.playDirection = Direction.Up;
-        break;
-    
-        case 39: // Right
-        that.playDirection = Direction.Right;
-        break;
-    
-        case 40: // Down
-        that.playDirection = Direction.Down;
-        break;
+      const playDirection = that.control.getDirectionBykeyCode(event.keyCode)
+      if (playDirection !== Direction.None) {
+        that.playDirection = playDirection
       }
     }, false);
 
+    const elemLeft = canvas.offsetLeft, elemTop = canvas.offsetTop;
+    canvas.addEventListener('click', function(event) {
+      var x = event.pageX - elemLeft,
+        y = event.pageY - elemTop;
+
+        const playDirection = that.control.getDirectionByPoint(new Point(x, y));
+        if (playDirection !== Direction.None) {
+          that.playDirection = playDirection
+        }
+    }, false);
+
+    // Processing message
     this.communication.onMesssage((msg: Message) => {
       if (msg.getType() === Message.Type.JOINED && !this.players.has(msg.getPlayerid())) {
         const player = new Player(msg.getPlayerid(), 50, 50);
         player.setDirection(Direction.None)
-
-        // console.log("joned", player);
         
         this.players.set(msg.getPlayerid(), player)
         this.playerId = msg.getPlayerid();
 
         this.camera.follow(player, vWidth / 2, vHeight / 2);
-      } else if (msg.getType() === Message.Type.DIRECTION) {
-        const direction = PDirection.deserializeBinary(msg.getData_asU8());
-        // this.players.forEach((player) => {
-        //   player.setDirection(this.playDirection)
-        // });
-        if (this.players.has(msg.getPlayerid())) {
-          this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
-        } else {
-          // const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
-          const newPlayer = new Player(msg.getPlayerid(), 50, 50, 200, 50);
-          newPlayer.setDirection(direction.getType())
-          this.players.set(msg.getPlayerid(), newPlayer);
-        }
-      } else if (msg.getType() === Message.Type.DATA) {
+    } else if (msg.getType() === Message.Type.INFO) {
+      const info = Info.deserializeBinary(msg.getData_asU8());
+      this.infoEl.setInfo(info)
+    } else if (msg.getType() === Message.Type.QUIT) {
+      if (this.players.has(msg.getPlayerid())) {
+        this.players.delete(msg.getPlayerid())
+      }
+    } else if (msg.getType() === Message.Type.DATA) {
         const data = Data.deserializeBinary(msg.getData_asU8());
-        // this.players.forEach((player) => {
-        //   player.setDirection(this.playDirection)
-        // });
         if (this.players.has(msg.getPlayerid())) {
           const player = this.players.get(msg.getPlayerid())!
-          // player.setDirection(Direction.None)
           player.setPosition(data.getY(), data.getX())
           player.setVelocity(data.getYv(), data.getXv())
           player.setColor(data.getColor())
-          // this.players.get(msg.getPlayerid())!.setDirection(direction.getType())
         } else {
-          //const color = '#'+(0x1000000+(Math.random())*0xffffff).toString(16).substr(1,6);
           const newPlayer = new Player(msg.getPlayerid(), data.getX(), data.getY(), 200, 50, data.getColor());
           newPlayer.setPosition(data.getY(), data.getX())
-          // console.log(data.getYv(), data.getXv(), "data.getYv(), data.getXv()");
           newPlayer.setVelocity(data.getYv(), data.getXv())
           newPlayer.setDirection(Direction.None)
           this.players.set(msg.getPlayerid(), newPlayer);
@@ -127,8 +121,6 @@ export class Game {
     var now = Date.now();
     var dt = (now - this.lastTime) / 1000.0;
 
-    // console.log((now - this.lastTime), "dt")
-
     this.update(dt);
     this.render();
 
@@ -141,21 +133,6 @@ export class Game {
 
     this.handleInput(dt);
     this.updateEntities(dt);
-
-    // It gets harder over time by adding enemies using this
-    // equation: 1-.993^gameTime
-    // if(Math.random() < 1 - Math.pow(.993, gameTime)) {
-    //     enemies.push({
-    //         pos: [canvas.width,
-    //               Math.random() * (canvas.height - 39)],
-    //         sprite: new Sprite('img/sprites.png', [0, 78], [80, 39],
-    //                            6, [0, 1, 2, 3, 2, 1])
-    //     });
-    // }
-
-    // checkCollisions();
-
-    // scoreEl.innerHTML = score;
   }
 
   private handleInput(dt: number) {
@@ -165,9 +142,6 @@ export class Game {
       return
     }
 
-    // this.players.forEach((player) => {
-    //   player.setDirection(this.playDirection)
-    // });
     if (this.players.has(this.playerId)) {
       this.players.get(this.playerId)!.setDirection(this.playDirection)
     }
@@ -176,15 +150,6 @@ export class Game {
     const message = new Message();
     message.setType(Message.Type.COMMAND);
     const direction = new Command();
-
-    // if (this.direction == Direction.Left)
-    // this.x -= this.speed * dt;
-    // if (this.direction == Direction.Up)
-    // this.y -= this.speed * dt;
-    // if (this.direction == Direction.Right)
-    // this.x += this.speed * dt;
-    // if (this.direction == Direction.Down)
-    // this.y += this.speed * dt;
 
     let xv: number = 0;
     let yv: number = 0;
@@ -224,18 +189,14 @@ export class Game {
 
   private updateEntities(dt: number) {
     // Update the player sprite animation
-    //this.player.update(dt, this.canvasWidth, this.canvasHeight);
     this.players.forEach((player) => {
-      // player.update(dt, this.canvasWidth, this.canvasHeight);
       player.update2(dt, 5000, 3000)
     });
 
-    //player.update(STEP, room.width, room.height);
     this.camera.update();
   }
 
   private render() { 
-    //this.resizeCanvasToDisplaySize(this.ctx.canvas);
     this.canvasWidth = this.ctx.canvas.width;
     this.canvasHeight = this.ctx.canvas.height;
 
@@ -243,8 +204,8 @@ export class Game {
 
     this.map.draw(this.ctx, this.camera.xView, this.camera.yView);
 
-    // this.drawGrid(this.ctx);
-    // this.player.render(this.ctx);
+    this.infoEl.render(this.ctx, this.canvasWidth, this.canvasHeight);
+
     this.players.forEach((player) => {
       player.render(this.ctx, this.camera.xView, this.camera.yView);
     });
@@ -265,46 +226,4 @@ export class Game {
       canvas.height = height;
     }
   };
-  
-  // private drawGrid(
-  //     ctx: CanvasRenderingContext2D, 
-  //     minor: number | undefined = undefined, 
-  //     major: number | undefined = undefined, 
-  //     stroke: string | undefined = undefined, 
-  //     fill: string | undefined = undefined,
-  // ){
-  //     minor = minor || 10;
-  //     major = major || minor * 5;
-  //     stroke = stroke || "#00FF00";
-  //     fill = fill || "#009900";
-  //     ctx.save();
-  //     ctx.strokeStyle = stroke;
-  //     ctx.fillStyle = fill;
-  //     let width = ctx.canvas.width, 
-  //         height = ctx.canvas.height;
-      
-  //     for(var x = 0; x < width; x += minor) {
-  //         ctx.beginPath();
-  //         ctx.moveTo(x, 0);
-  //         ctx.lineTo(x, height);
-  //         ctx.lineWidth = (x % major == 0) ? 0.5 : 0.25;
-  //         ctx.stroke();
-  //         if(x % major == 0 ) {
-  //             ctx.fillText(x.toString(), x, 10);
-  //         }
-  //     }
-
-  //     for(var y = 0; y < height; y += minor) {
-  //         ctx.beginPath();
-  //         ctx.moveTo(0, y);
-
-  //         ctx.lineTo(width, y);
-  //         ctx.lineWidth = (y % major == 0) ? 0.5 : 0.25;
-  //         ctx.stroke();
-  //         if(y % major == 0 ) {
-  //             ctx.fillText(y.toString(), 0, y + 10);
-  //         }
-  //     }
-  //     ctx.restore();
-  // }
 }
