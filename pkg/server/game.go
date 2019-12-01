@@ -2,6 +2,7 @@ package server
 
 import (
 	"log"
+	"math/rand"
 	"server/messages"
 	"sort"
 	"time"
@@ -157,6 +158,10 @@ func (g *Game) WriteNear(p Player, m *messages.Message) {
 }
 
 func (g *Game) AddPlayer(p Player) {
+	p.SetPosition(&Position{
+		x: float64(rand.Int63n(g.WorldWidth)),
+		y: float64(rand.Int63n(g.WorldHeight)),
+	})
 	g.Players[p.GetPlayerId()] = p
 }
 

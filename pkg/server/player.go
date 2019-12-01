@@ -55,6 +55,7 @@ type Player interface {
 	AddCommand(message *messages.Command)
 	Tick(dt float64, worldWidth int64, worldHeight int64)
 	GetPosition(dt float64) *Position
+	SetPosition(pos *Position)
 	GetCommand() (float64, float64)
 	GetColor() string
 	IsNear(other Player, playerNearValue float64) bool
@@ -164,6 +165,10 @@ func (p *player) GetPosition(dt float64) *Position {
 	// defer p.Unlock()
 
 	return p.position
+}
+
+func (p *player) SetPosition(pos *Position) {
+	p.position = pos
 }
 
 func (p *player) GetCommand() (float64, float64) {
