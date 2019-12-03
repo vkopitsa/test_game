@@ -102,6 +102,7 @@ module.exports = (env, argv) => {
         },
         devServer: {
             port: 9000,
+            host: '0.0.0.0',
             contentBase: './dist',
             proxy: {
                 '/ws': {

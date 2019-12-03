@@ -65,7 +65,9 @@ proto.messages.Data.toObject = function(includeInstance, msg) {
     xv: +jspb.Message.getFieldWithDefault(msg, 4, 0.0),
     height: jspb.Message.getFieldWithDefault(msg, 5, 0),
     width: jspb.Message.getFieldWithDefault(msg, 6, 0),
-    color: jspb.Message.getFieldWithDefault(msg, 7, "")
+    color: jspb.Message.getFieldWithDefault(msg, 7, ""),
+    time: jspb.Message.getFieldWithDefault(msg, 8, 0),
+    delta: +jspb.Message.getFieldWithDefault(msg, 9, 0.0)
   };
 
   if (includeInstance) {
@@ -129,6 +131,14 @@ proto.messages.Data.deserializeBinaryFromReader = function(msg, reader) {
     case 7:
       var value = /** @type {string} */ (reader.readString());
       msg.setColor(value);
+      break;
+    case 8:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setTime(value);
+      break;
+    case 9:
+      var value = /** @type {number} */ (reader.readDouble());
+      msg.setDelta(value);
       break;
     default:
       reader.skipField();
@@ -205,6 +215,20 @@ proto.messages.Data.serializeBinaryToWriter = function(message, writer) {
   if (f.length > 0) {
     writer.writeString(
       7,
+      f
+    );
+  }
+  f = message.getTime();
+  if (f !== 0) {
+    writer.writeInt64(
+      8,
+      f
+    );
+  }
+  f = message.getDelta();
+  if (f !== 0.0) {
+    writer.writeDouble(
+      9,
       f
     );
   }
@@ -313,6 +337,36 @@ proto.messages.Data.prototype.getColor = function() {
 /** @param {string} value */
 proto.messages.Data.prototype.setColor = function(value) {
   jspb.Message.setProto3StringField(this, 7, value);
+};
+
+
+/**
+ * optional int64 time = 8;
+ * @return {number}
+ */
+proto.messages.Data.prototype.getTime = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 8, 0));
+};
+
+
+/** @param {number} value */
+proto.messages.Data.prototype.setTime = function(value) {
+  jspb.Message.setProto3IntField(this, 8, value);
+};
+
+
+/**
+ * optional double delta = 9;
+ * @return {number}
+ */
+proto.messages.Data.prototype.getDelta = function() {
+  return /** @type {number} */ (+jspb.Message.getFieldWithDefault(this, 9, 0.0));
+};
+
+
+/** @param {number} value */
+proto.messages.Data.prototype.setDelta = function(value) {
+  jspb.Message.setProto3FloatField(this, 9, value);
 };
 
 

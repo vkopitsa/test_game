@@ -26,14 +26,11 @@ export class Game {
   private canvasWidth: number = 0; // width of the canvas
   private canvasHeight: number = 0; // height of the canvas
   private lastTime: number = 0;
-  private gameTime: number = 0;
+  // private gameTime: number = 0;
   private playDirection: Direction = Direction.Stop;
   private previousPlayDirection: Direction = Direction.Stop;
   private playerId: number = 0;
   private readonly players: Map<number,Player> = new Map<number,Player>();
-
-  // Speed in pixels per second
-  private playerSpeed = 100;
 
   private map: GameMap;
   private camera: Camera;
@@ -41,6 +38,8 @@ export class Game {
   private control: Control;
 
   private infoEl: GameInfo = new GameInfo();
+
+  private serverDelta: number = 0.0;
 
   constructor(canvas: HTMLCanvasElement, private communication: IСommunication) {
     this.ctx = canvas.getContext('2d')!;
@@ -100,17 +99,26 @@ export class Game {
       }
     } else if (msg.getType() === Message.Type.DATA) {
         const data = Data.deserializeBinary(msg.getData_asU8());
+
+        // set server delta need to interpolation
+        this.serverDelta = data.getDelta()
+
+        let player: Player;
         if (this.players.has(msg.getPlayerid())) {
-          const player = this.players.get(msg.getPlayerid())!
-          player.setPosition(data.getY(), data.getX())
-          player.setVelocity(data.getYv(), data.getXv())
+          player = this.players.get(msg.getPlayerid())!
           player.setColor(data.getColor())
         } else {
-          const newPlayer = new Player(msg.getPlayerid(), data.getX(), data.getY(), 200, 50, data.getColor());
-          newPlayer.setPosition(data.getY(), data.getX())
-          newPlayer.setVelocity(data.getYv(), data.getXv())
-          newPlayer.setDirection(Direction.None)
-          this.players.set(msg.getPlayerid(), newPlayer);
+          player = new Player(msg.getPlayerid(), data.getX(), data.getY(), 200, 50, data.getColor());
+          player.setDirection(Direction.None)
+          this.players.set(msg.getPlayerid(), player);
+        }
+
+        // reconciliation
+        if (msg.getPlayerid() === this.playerId) {
+          player.reconciliation(data);
+        } else {
+          // ineed to nterpolation
+          player.addData(data);
         }
       }
 
@@ -129,7 +137,7 @@ export class Game {
   }
 
   private update(dt: number) {
-    this.gameTime += dt;
+    // this.gameTime += dt;
 
     this.handleInput(dt);
     this.updateEntities(dt);
@@ -184,12 +192,18 @@ export class Game {
     this.communication.sendMessage(message)
     // end
 
+    if (this.players.has(this.playerId)) {
+      const player = this.players.get(this.playerId)!
+      player.addCommand(direction);
+    }
+
     this.previousPlayDirection = this.playDirection;
   }
 
   private updateEntities(dt: number) {
     // Update the player sprite animation
-    this.players.forEach((player) => {
+    this.players.forEach((player: Player) => {
+      player.interpolate(this.serverDelta)
       player.update2(dt, 5000, 3000)
     });
 

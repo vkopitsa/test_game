@@ -1,10 +1,14 @@
 import { Direction } from './game';
+import { Command } from './proto/command_pb';
+import { Data } from './proto/data_pb';
 
 export class Player {
 
     private vx = 0;
     private vy = 0;
     private direction: Direction = Direction.Stop;
+    private commands: Command[] = [];
+    private dataBuffer: [number, Data][] = [];
 
   constructor(
     public readonly id: any,
@@ -64,6 +68,83 @@ export class Player {
     if (this.x + this.radius > worldWidth || this.x - this.radius < -this.radius) {
       this.vx = (this.x + this.radius) > worldWidth ? -1 : 1;
     }
+}
+
+public applyData(data: Data) {
+  this.setPosition(data.getY(), data.getX())
+  this.setVelocity(data.getYv(), data.getXv())
+}
+
+// reconciliation
+public addCommand(command: Command) {
+  this.commands.push(command);
+}
+
+public reconciliation(data: Data) {
+  // Received the authoritative position of this player.
+  // this.applyData(data);
+  // this.y = data.getY()
+  // this.x = data.getX()
+
+  if (this.commands.length === 0) {
+    this.applyData(data);
+  } else if (data.getTime() !== 0) {
+    var j = 0;
+    while (j < this.commands.length) {
+      var command = this.commands[j];
+      if (command.getTime() <= data.getTime()) {
+        // Already processed. Its effect is already taken into account into the world update
+        // we just got, so we can drop it.
+        this.commands.splice(j, 1);
+      } else {
+        // Not processed by the server yet. Re-apply it.
+        this.applyData(data);
+        j++;
+      }
+    }
+  }
+}
+
+public interpolate(dt: number,) {
+  // Compute render timestamp.
+  var now = +new Date(); 
+  var render_timestamp = now - (1000*dt);
+
+  // console.log((dt))
+
+  // if (this.dataBuffer.length >= 2){
+  //   console.log(this.dataBuffer[1][0] <= render_timestamp)
+  // }
+
+  // Drop older positions.
+  while (this.dataBuffer.length >= 2 && this.dataBuffer[1][0] <= render_timestamp) {
+    this.dataBuffer.shift();
+  }
+
+  console.log(this.dataBuffer.length);
+
+  // Interpolate between the two surrounding authoritative positions.
+  if (this.dataBuffer.length >= 2 && this.dataBuffer[0][0] <= render_timestamp && render_timestamp <= this.dataBuffer[1][0]) {
+    var p0 = this.dataBuffer[0][1];
+    var p1 = this.dataBuffer[1][1];
+    var t0 = this.dataBuffer[0][0];
+    var t1 = this.dataBuffer[1][0];
+
+    // const x = p0.getX() + (p1.getX() - p0.getX()) * (render_timestamp - t0) / (t1 - t0);
+    // const y = p0.getY() + (p1.getY() - p0.getY()) * (render_timestamp - t0) / (t1 - t0);
+    // this.x = this.x + (dt *this.speed * this.vx);
+    const x = p0.getX() + (p1.getX() - p0.getX()) * (render_timestamp - t0) / (t1 - t0)
+    const y = p0.getY() + (p1.getY() - p0.getY()) * (render_timestamp - t0) / (t1 - t0)
+    // this.applyData(this.dataBuffer[0][1])
+    console.log(x, y);
+    this.setPosition(y, x)
+    this.setVelocity(p0.getYv(), p0.getXv())
+  }
+}
+
+public addData(data: Data) {
+  var timestamp = +new Date();
+  this.dataBuffer.push([timestamp, data]);
 }
 
   public setColor(color: string){

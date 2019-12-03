@@ -109,7 +109,7 @@ func (g *Game) processInputs(dt float64) {
 			continue
 		}
 
-		yv, xy := p.GetCommand()
+		yv, xy := p.GetCommand().GetYv(), p.GetCommand().GetXv()
 
 		d := &messages.Data{
 			Y:     position.y,
@@ -117,7 +117,15 @@ func (g *Game) processInputs(dt float64) {
 			Yv:    yv,
 			Xv:    xy,
 			Color: p.GetColor(),
+			Time:  p.GetCommand().GetTime(),
+			Delta: dt,
 		}
+
+		// reset command identification
+		if p.GetCommand() != nil {
+			p.GetCommand().Time = 0
+		}
+
 		data, err := proto.Marshal(d)
 		if err != nil {
 			log.Println("marshaling error: ", err)

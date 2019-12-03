@@ -56,7 +56,7 @@ type Player interface {
 	Tick(dt float64, worldWidth int64, worldHeight int64)
 	GetPosition(dt float64) *Position
 	SetPosition(pos *Position)
-	GetCommand() (float64, float64)
+	GetCommand() *messages.Command
 	GetColor() string
 	IsNear(other Player, playerNearValue float64) bool
 	GetTerminated() bool
@@ -171,11 +171,12 @@ func (p *player) SetPosition(pos *Position) {
 	p.position = pos
 }
 
-func (p *player) GetCommand() (float64, float64) {
+func (p *player) GetCommand() *messages.Command {
 	// p.Lock()
 	// defer p.Unlock()
 
-	return p.command.GetYv(), p.command.GetXv()
+	// .GetYv(), p.command.GetXv()
+	return p.command
 }
 
 func (p *player) GetScore() int64 {

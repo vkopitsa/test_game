@@ -25,6 +25,12 @@ export class Data extends jspb.Message {
   getColor(): string;
   setColor(value: string): void;
 
+  getTime(): number;
+  setTime(value: number): void;
+
+  getDelta(): number;
+  setDelta(value: number): void;
+
   serializeBinary(): Uint8Array;
   toObject(includeInstance?: boolean): Data.AsObject;
   static toObject(includeInstance: boolean, msg: Data): Data.AsObject;
@@ -44,6 +50,8 @@ export namespace Data {
     height: number,
     width: number,
     color: string,
+    time: number,
+    delta: number,
   }
 }
 
