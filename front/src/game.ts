@@ -202,6 +202,11 @@ export class Game {
     this.communication.sendMessage(message)
     // end
 
+    if (this.players.has(this.playerId)) {
+      const player = this.players.get(this.playerId)!
+      player.setVelocity(yv, xv)
+    }
+
     // if (this.players.has(this.playerId)) {
     //   const player = this.players.get(this.playerId)!
     //   player.addCommand(direction);
