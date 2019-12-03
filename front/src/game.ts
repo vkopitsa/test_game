@@ -204,7 +204,8 @@ export class Game {
 
     if (this.players.has(this.playerId)) {
       const player = this.players.get(this.playerId)!
-      player.setVelocity(yv, xv)
+      player.setVelocity(yv, xv);
+      player.update(dt, 5000, 3000);
     }
 
     // if (this.players.has(this.playerId)) {
