@@ -20,37 +20,7 @@ export class Player {
   ) {
   }
 
-  public update222(dt: number, canvasWidth: number, canvasHeight: number) { 
-    // Increments the ball's position using its velocity
-    this.x = this.vx;
-    this.y = this.vy;
-
-    if(this.direction == Direction.Down) {
-      this.vy += this.speed * dt;
-    }
-
-    if(this.direction == Direction.Up) {
-      this.vy -= this.speed * dt;
-    }
-
-    if(this.direction == Direction.Left) {
-      this.vx -= this.speed * dt;
-    }
-
-    if(this.direction == Direction.Right) {
-      this.vx += this.speed * dt;
-    }
-
-    if (this.vy > canvasHeight || this.vy < 0) {
-      this.direction = this.vy > canvasHeight ? Direction.Up : Direction.Down;
-    }
-
-    if (this.vx > canvasWidth || this.vx < 0) {
-      this.direction = this.vx > canvasWidth ? Direction.Left : Direction.Right;
-    }
-  }
-
-  public update2(dt: number, worldWidth: number, worldHeight: number){
+  public update(dt: number, worldWidth: number, worldHeight: number){
     // parameter step is the time between frames ( in seconds )
     if (this.vy != 0) {
       this.y = this.y + (dt *this.speed * this.vy);
@@ -121,7 +91,7 @@ public interpolate(dt: number,) {
     this.dataBuffer.shift();
   }
 
-  console.log(this.dataBuffer.length);
+  // console.log(this.dataBuffer.length);
 
   // Interpolate between the two surrounding authoritative positions.
   if (this.dataBuffer.length >= 2 && this.dataBuffer[0][0] <= render_timestamp && render_timestamp <= this.dataBuffer[1][0]) {
@@ -136,7 +106,7 @@ public interpolate(dt: number,) {
     const x = p0.getX() + (p1.getX() - p0.getX()) * (render_timestamp - t0) / (t1 - t0)
     const y = p0.getY() + (p1.getY() - p0.getY()) * (render_timestamp - t0) / (t1 - t0)
     // this.applyData(this.dataBuffer[0][1])
-    console.log(x, y);
+    //console.log(x, y);
     this.setPosition(y, x)
     this.setVelocity(p0.getYv(), p0.getXv())
   }
@@ -182,5 +152,26 @@ public addData(data: Data) {
     // Colors and fills the ball
     ctx.fillStyle = this.color;
     ctx.fill();
+  }
+
+  // Determines is a player is near other player.
+  public isNear(other: Player, playerNearValue: number): boolean { 
+    const xdiff = Math.abs(this.x - other.x);
+    const ydiff =Math.abs(this.y - other.y);
+    const mdiff = Math.max(xdiff, ydiff);
+
+    return mdiff < playerNearValue
+  }
+
+  public overlaps(other: Player): boolean { 
+    const dx = this.x - other.x;
+    const dy = this.y - other.y;
+    const distance = Math.sqrt(dx*dx + dy*dy);
+
+    return distance < this.radius+other.radius;
+  }
+
+  public revertDirection() { 
+    this.setVelocity(-this.vy, -this.vx);
   }
 }

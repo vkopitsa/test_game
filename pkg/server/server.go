@@ -142,13 +142,29 @@ func (s *server) handleNewPlayer(pl Player) {
 }
 
 func (s *server) FindGame(p Player) *Game {
+	var game *Game
 	if len(s.Games) == 0 {
-		game := NewGame()
+		game = NewGame()
 		game.Start()
 
 		s.Games[0] = game
+	} else {
+		for _, g := range s.Games {
+			if len(g.Players) < 50 {
+				game = g
+				break
+			}
+		}
+
+		if game == nil {
+			game = NewGame()
+			game.Start()
+
+			s.Games[len(s.Games)+1] = game
+		}
 	}
-	return s.Games[0]
+
+	return game
 }
 
 func (s *server) handle() {

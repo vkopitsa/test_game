@@ -41,6 +41,9 @@ export class Game {
 
   private serverDelta: number = 0.0;
 
+  private playerNearValue: number = 1500;
+
+
   constructor(canvas: HTMLCanvasElement, private communication: IСommunication) {
     this.ctx = canvas.getContext('2d')!;
     this.resizeCanvasToDisplaySize(this.ctx.canvas);
@@ -113,13 +116,20 @@ export class Game {
           this.players.set(msg.getPlayerid(), player);
         }
 
-        // reconciliation
-        if (msg.getPlayerid() === this.playerId) {
-          player.reconciliation(data);
-        } else {
-          // ineed to nterpolation
-          player.addData(data);
-        }
+        player.applyData(data);
+        // if (msg.getPlayerid() === this.playerId) {
+        //   player.applyData(data);
+        // } else {
+        //   player.addData(data);
+        // }
+
+        // // reconciliation
+        // if (msg.getPlayerid() === this.playerId) {
+        //   player.reconciliation(data);
+        // } else {
+        //   // ineed to interpolation
+        //   player.addData(data);
+        // }
       }
 
     });
@@ -146,7 +156,7 @@ export class Game {
   private handleInput(dt: number) {
 
     // pass if the same direction
-    if (this.previousPlayDirection === this.playDirection) {
+    if (this.playDirection === Direction.None) {
       return
     }
 
@@ -192,19 +202,30 @@ export class Game {
     this.communication.sendMessage(message)
     // end
 
-    if (this.players.has(this.playerId)) {
-      const player = this.players.get(this.playerId)!
-      player.addCommand(direction);
-    }
+    // if (this.players.has(this.playerId)) {
+    //   const player = this.players.get(this.playerId)!
+    //   player.addCommand(direction);
+    // }
 
-    this.previousPlayDirection = this.playDirection;
+    // this.previousPlayDirection = this.playDirection;
+    this.playDirection = Direction.None;
   }
 
   private updateEntities(dt: number) {
     // Update the player sprite animation
     this.players.forEach((player: Player) => {
-      player.interpolate(this.serverDelta)
-      player.update2(dt, 5000, 3000)
+      // player.interpolate(this.serverDelta)
+      player.update(dt, 5000, 3000)
+
+      // Collision check
+      this.players.forEach((otherPlayer: Player) => {
+        if(player.id != otherPlayer.id 
+            && player.isNear(otherPlayer, this.playerNearValue) 
+            && player.overlaps(otherPlayer)) {
+              player.revertDirection();
+              otherPlayer.revertDirection();
+        }
+      })
     });
 
     this.camera.update();
