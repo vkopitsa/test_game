@@ -125,7 +125,7 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 		p.position.x = p.position.x + (dt * p.speed * p.command.GetXv())
 	}
 
-	if p.position.y+p.radius > float64(worldHeight) || p.position.y-p.radius < -p.radius {
+	if p.position.y+p.radius > float64(worldHeight) || p.position.y-p.radius < 0 {
 		// Up
 		if (p.position.y + p.radius) > float64(worldHeight) {
 			p.command.Yv = -1
@@ -135,7 +135,7 @@ func (p *player) Tick(dt float64, worldWidth int64, worldHeight int64) {
 		}
 	}
 
-	if p.position.x+p.radius > float64(worldWidth) || p.position.x-p.radius < -p.radius {
+	if p.position.x+p.radius > float64(worldWidth) || p.position.x-p.radius < 0 {
 		// Left
 		if (p.position.x + p.radius) > float64(worldWidth) {
 			p.command.Xv = -1

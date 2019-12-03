@@ -31,11 +31,11 @@ export class Player {
     }
 
     // don't let player leaves the world's boundary
-    if (this.y + this.radius > worldHeight || this.y - this.radius < -this.radius) {
+    if (this.y + this.radius > worldHeight || this.y - this.radius < 0) {
       this.vy = (this.y + this.radius) > worldHeight ? -1 : 1;
     }
 
-    if (this.x + this.radius > worldWidth || this.x - this.radius < -this.radius) {
+    if (this.x + this.radius > worldWidth || this.x - this.radius < 0) {
       this.vx = (this.x + this.radius) > worldWidth ? -1 : 1;
     }
 }
